@@ -9,113 +9,246 @@ Main
 import networkx as nx
 import matplotlib.pyplot as plt
 
-class State:
-    def __init__(self, label, is_accepting=False):
-        self.label = label
-        self.is_accepting = is_accepting
-        self.transitions = {}
+class Automaton:
+    def __init__(self, states, alphabet, transitions, start_state, accept_states):
+        # Inicializa un objeto Automaton con estados, alfabeto, transiciones, estado inicial y estados de aceptación.
+        self.states = states
+        self.alphabet = alphabet
+        self.transitions = transitions
+        self.start_state = start_state
+        self.accept_states = accept_states
 
-def infix_to_postfix(infix_expression):
-    precedence = {'*': 3, '.': 2, '|': 1, '(': 0}
+def shunting_yard(infix_expression):
+    # Algoritmo Shunting Yard para convertir expresión infix a postfix
     output = []
     stack = []
+    precedence = {'*': 3, '.': 2, '|': 1}
 
-    for symbol in infix_expression:
-        if symbol.isalnum():
-            output.append(symbol)
-        elif symbol == '(':
-            stack.append(symbol)
-        elif symbol == ')':
+    for token in infix_expression:
+        if token.isalnum():
+            # Si el token es alfanumérico, lo agrega directamente a la salida
+            output.append(token)
+        elif token == '(':
+            # Si el token es '(', lo agrega al stack
+            stack.append(token)
+        elif token == ')':
+            # Si el token es ')', saca operadores del stack y los agrega a la salida hasta encontrar '('
             while stack and stack[-1] != '(':
                 output.append(stack.pop())
             stack.pop()
         else:
-            while stack and precedence[stack[-1]] >= precedence[symbol]:
+            # Si el token es un operador, saca operadores del stack y los agrega a la salida según su precedencia
+            while stack and precedence.get(stack[-1], 0) >= precedence.get(token, 0):
                 output.append(stack.pop())
-            stack.append(symbol)
+            stack.append(token)
 
+    # Vacía el stack al final
     while stack:
         output.append(stack.pop())
 
-    return ''.join(output)
+    return output
 
-def thompson_construction(postfix_expression):
+def thompson_algorithm(postfix_expression):
+    # Algoritmo Thompson para construir un autómata finito no determinista (AFN)
     stack = []
 
-    for symbol in postfix_expression:
-        if symbol.isalnum():
-            new_state = State(symbol)
-            stack.append(new_state)
-        else:
-            if symbol == '*':
-                state = stack.pop()
-                new_state = State('ε', is_accepting=True)
-                state.transitions[new_state] = 'ε'
-                new_state.transitions[state] = 'ε'
-                stack.append(new_state)
-            elif symbol == '|':
-                state2 = stack.pop()
-                state1 = stack.pop()
-                new_state = State('ε', is_accepting=True)
-                new_state.transitions[state1] = 'ε'
-                new_state.transitions[state2] = 'ε'
-                stack.append(new_state)
-            elif symbol == '.':
-                state2 = stack.pop()
-                state1 = stack.pop()
-                state1.is_accepting = False
-                state1.transitions[state2] = 'ε'
-                stack.append(state1)
+    for token in postfix_expression:
+        if token.isalnum():
+            # Si el token es alfanumérico, crea un AFN básico con un estado inicial, un estado de aceptación y una transición entre ellos
+            accept_state = 1
+            start_state = 0
+            transitions = {(start_state, token): {accept_state}}
+            afn = Automaton({start_state, accept_state}, {token}, transitions, start_state, {accept_state})
+            stack.append(afn)
+        elif token == '*':
+            # Operación de Cerradura de Kleene: crea un nuevo estado inicial y de aceptación, y conecta con transiciones epsilon al AFN anterior
+            operand = stack.pop()
+            accept_state = max(operand.accept_states) + 1
+            start_state = min(operand.states) - 1
+            transitions = operand.transitions.copy()
+            transitions.update({(accept_state, None): {operand.start_state}})
+            transitions.update({(start_state, None): {accept_state}})
+            transitions.update({(operand.accept_states.pop(), None): {operand.start_state}})
+            transitions.update({(accept_state, None): {start_state}})
+            afn = Automaton(operand.states | {start_state, accept_state}, operand.alphabet, transitions, start_state, {accept_state})
+            stack.append(afn)
+        elif token == '.':
+            # Operación de Concatenación: conecta el estado de aceptación del primer AFN con el estado inicial del segundo AFN
+            operand2 = stack.pop()
+            operand1 = stack.pop()
+            accept_state = max(operand2.accept_states)
+            transitions = operand1.transitions.copy()
+            transitions.update(operand2.transitions)
+            transitions[(operand1.accept_states.pop(), None)].add(operand2.start_state)
+            afn = Automaton(operand1.states | operand2.states, operand1.alphabet | operand2.alphabet, transitions, operand1.start_state, {accept_state})
+            stack.append(afn)
+        elif token == '|':
+            # Operación de Unión (OR): crea nuevos estados inicial y de aceptación, y conecta con transiciones epsilon a los estados iniciales de los AFN anteriores
+            operand2 = stack.pop()
+            operand1 = stack.pop()
+            accept_state = max(operand1.accept_states) + max(operand2.accept_states) + 1
+            start_state = min(operand1.states) - 1
+            transitions = operand1.transitions.copy()
+            transitions.update(operand2.transitions)
+            transitions.update({(start_state, None): {operand1.start_state, operand2.start_state}})
+            transitions.update({(accept_state1, None): {accept_state} for accept_state1 in operand1.accept_states})
+            transitions.update({(accept_state2, None): {accept_state} for accept_state2 in operand2.accept_states})
+            afn = Automaton(operand1.states | operand2.states | {start_state, accept_state}, operand1.alphabet | operand2.alphabet, transitions, start_state, {accept_state})
+            stack.append(afn)
 
     return stack.pop()
 
-def nfa_to_dfa(nfa):
-    return nfa
-    # Implementa la construcción de subconjuntos (Subset Construction) aquí
-    # Devuelve el AFD resultante
+def epsilon_closure(states, transitions):
+    # Calcula la cerradura-épsilon de un conjunto de estados en un AFN
+    closure = set(states)
+    stack = list(states)
 
-def minimize_dfa(dfa):
-    return dfa
-    # Implementa el algoritmo de minimización para reducir el número de estados en el AFD
-    # Devuelve el AFD minimizado
+    while stack:
+        current_state = stack.pop()
+        epsilon_moves = transitions.get((current_state, None), set())
 
-def visualize_graph(states, filename='graph'):
-    G = nx.DiGraph()
+        for state in epsilon_moves:
+            if state not in closure:
+                closure.add(state)
+                stack.append(state)
+
+    return frozenset(closure)
+
+def move(states, symbol, transitions):
+    # Realiza la operación de moverse desde un conjunto de estados dado un símbolo en un AFN
+    result = set()
 
     for state in states:
-        G.add_node(state.label, shape='circle', color='black', peripheries=2 if state.is_accepting else 1)
+        transitions_for_state = transitions.get((state, symbol), set())
+        result.update(transitions_for_state)
 
-        for next_state, symbol in state.transitions.items():
-            G.add_edge(state.label, next_state.label, label=symbol)
+    return frozenset(result)
+
+def nfa_to_dfa(nfa):
+    # Convierte un AFN a un AFD usando el algoritmo de construcción de subconjuntos
+    dfa_states = set()
+    dfa_transitions = {}
+    dfa_start_state = epsilon_closure({nfa.start_state}, nfa.transitions)
+    dfa_accept_states = set()
+
+    stack = [dfa_start_state]
+    seen = set()
+
+    while stack:
+        current_states = stack.pop()
+        dfa_states.add(current_states)
+
+        for symbol in nfa.alphabet:
+            next_states = epsilon_closure(move(current_states, symbol, nfa.transitions), nfa.transitions)
+            dfa_transitions[(current_states, symbol)] = next_states
+
+            if next_states not in seen:
+                seen.add(next_states)
+                stack.append(next_states)
+
+        if nfa.accept_states.intersection(current_states):
+            dfa_accept_states.add(current_states)
+
+    return Automaton(dfa_states, nfa.alphabet, dfa_transitions, dfa_start_state, dfa_accept_states)
+
+def minimize_dfa(dfa):
+    # Minimiza un AFD utilizando el algoritmo de particiones
+    partition = [dfa.accept_states, dfa.states - dfa.accept_states]
+
+    while True:
+        new_partition = []
+
+        for group in partition:
+            for symbol in dfa.alphabet:
+                next_states = dfa.transitions.get((next(iter(group)), symbol), set())
+                next_group = [state for state in partition if next_states.issubset(state)][0]
+                new_partition.append(set(next_group))
+
+        if new_partition == partition:
+            break
+        partition = new_partition
+
+    dfa_minimized_states = set(range(len(partition)))
+    dfa_minimized_start_state = next(i for i, group in enumerate(partition) if dfa.start_state in group)
+    dfa_minimized_accept_states = {i for i, group in enumerate(partition) if dfa.accept_states.intersection(group)}
+
+    dfa_minimized_transitions = {}
+    for group in partition:
+        for symbol in dfa.alphabet:
+            next_states = dfa.transitions.get((next(iter(group)), symbol), set())
+            next_group = [state for state in partition if next_states.issubset(state)][0]
+            dfa_minimized_transitions[(partition.index(group), symbol)] = next_group
+
+    return Automaton(dfa_minimized_states, dfa.alphabet, dfa_minimized_transitions, dfa_minimized_start_state, dfa_minimized_accept_states)
+
+def draw_automaton(automaton, name="automaton"):
+    # Dibuja el autómata utilizando la biblioteca NetworkX y Matplotlib
+    G = nx.DiGraph()
+
+    for state in automaton.states:
+        G.add_node(state)
+
+    for transition, next_states in automaton.transitions.items():
+        current_state = (transition[0],) if isinstance(transition[0], int) else tuple(transition[0])
+
+        for next_state in next_states:
+            next_state_tuple = (next_state,) if isinstance(next_state, int) else tuple(next_state)
+
+            G.add_edge(current_state, next_state_tuple, label=str(transition[1]))
 
     pos = nx.spring_layout(G)
+    labels = {state: str(state) for state in automaton.states}
+    nx.draw(G, pos, with_labels=True, labels=labels, node_size=1000, node_color='skyblue')
 
-    plt.figure(figsize=(8, 8))
-    nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=1000, node_color='lightblue', font_color='black', font_size=10, arrowsize=20, connectionstyle='arc3,rad=0.1')
+    # Corrección en la creación de edge_labels
+    edge_labels = {}
+    for transition, next_states in automaton.transitions.items():
+        current_state = (transition[0],) if isinstance(transition[0], int) else tuple(transition[0])
 
-    plt.savefig(f'{filename}.png', format='png')
+        for next_state in next_states:
+            next_state_tuple = (next_state,) if isinstance(next_state, int) else tuple(next_state)
+
+            if current_state in pos and next_state_tuple in pos:
+                edge_labels[(current_state, next_state_tuple)] = str(transition[1])
+
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+
+    plt.title(f"{name} Automaton")
     plt.show()
 
-def simulate_dfa(dfa, input_string):
-    return dfa
-    # Implementa la simulación de un AFD aquí
-    # Devuelve True si la cadena es aceptada, False en caso contrario
+def simulate_automaton(automaton, input_string):
+    # Simula el autómata con una cadena de entrada y devuelve True si la cadena es aceptada, False en caso contrario
+    current_states = epsilon_closure({automaton.start_state}, automaton.transitions)
 
-# Ejemplo de uso
-infix_expression = "(a|b)*abb"
-postfix_expression = infix_to_postfix(infix_expression)
+    for symbol in input_string:
+        current_states = move(current_states, symbol, automaton.transitions)
+        current_states = epsilon_closure(current_states, automaton.transitions)
 
-nfa = thompson_construction(postfix_expression)
-visualize_graph([nfa], filename='nfa_graph')
+    return current_states.intersection(automaton.accept_states)
 
-dfa = nfa_to_dfa(nfa)
-visualize_graph([dfa], filename='dfa_graph')
+def main():
+    # Función principal que solicita la expresión regular y la cadena de entrada, y realiza la simulación y minimización de autómatas
+    regex = input("Ingrese la expresión regular en notación infix: ")
+    input_string = input("Ingrese la cadena a validar: ")
 
-minimized_dfa = minimize_dfa(dfa)
-visualize_graph([minimized_dfa], filename='minimized_dfa_graph')
+    postfix_expression = shunting_yard(regex)
+    print(f"\nExpresión regular en notación postfix: {' '.join(postfix_expression)}")
 
-input_string = "abb"
-if simulate_dfa(minimized_dfa, input_string):
-    print(f"{input_string} pertenece al lenguaje generado por la expresión regular.")
-else:
-    print(f"{input_string} no pertenece al lenguaje generado por la expresión regular.")
+    afn = thompson_algorithm(postfix_expression)
+    draw_automaton(afn, name="AFN")
+
+    afd = nfa_to_dfa(afn)
+    afd_minimized = minimize_dfa(afd)
+
+    draw_automaton(afd, name="AFD")
+    draw_automaton(afd_minimized, name="Minimized AFD")
+
+    afn_result = simulate_automaton(afn, input_string)
+    afd_result = simulate_automaton(afd_minimized, input_string)
+
+    print("\nResultados:")
+    print(f"Cadena '{input_string}' pertenece al lenguaje definido por la expresión regular (AFN): {bool(afn_result)}")
+    print(f"Cadena '{input_string}' pertenece al lenguaje definido por la expresión regular (AFD): {bool(afd_result)}")
+
+if __name__ == "__main__":
+    main()
