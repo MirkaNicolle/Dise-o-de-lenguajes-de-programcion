@@ -2,9 +2,6 @@
 Laboratorio AB
 Lenguajes de programación   
 9 de febrero de 2024
-
-Mirka Monzón 18139
-Main
 '''
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -18,37 +15,111 @@ class Automaton:
         self.start_state = start_state
         self.accept_states = accept_states
 
-def shunting_yard(infix_expression):
-    # Algoritmo Shunting Yard para convertir expresión infix a postfix
-    output = []
-    stack = []
-    precedence = {'*': 3, '.': 2, '|': 1}
+#clase nodo, caracteristicas
+class Node:
+    def __init__(self, char, position=None, nullable=None):
+        self.char = char
+        self.position = position
+        self.firstposition = {position}
+        self.lastposition = {position}
+        self.nextposition = set()
+        self.nullable = nullable
+        self.leftnode = None
+        self.rightnode = None
 
-    for token in infix_expression:
-        if token.isalnum():
-            # Si el token es alfanumérico, lo agrega directamente a la salida
-            output.append(token)
-        elif token == '(':
-            # Si el token es '(', lo agrega al stack
-            stack.append(token)
-        elif token == ')':
-            # Si el token es ')', saca operadores del stack y los agrega a la salida hasta encontrar '('
-            while stack and stack[-1] != '(':
-                output.append(stack.pop())
-            stack.pop()
+    def setPositions(self):
+        if self.rightnode:
+            self.rightnode.setPositions()
+        if self.leftnode:
+            self.leftnode.setPositions()
+        #aqui van los pasos de carlos
+        if self.char == ".":
+            self.leftnode #detallar la instruccion
+
+operators = ["*", "|", "."]
+
+def build_tree(expression):
+    build = []
+    expression = expression.replace(" ","")
+
+    i = 0
+
+    for char in expression:
+        if char in operators:
+            if char == "*" :
+                leftnode = build.pop()
+                build.append(Node(char))
+                build[-1].leftnode = leftnode
+            else:
+                rightnode = build.pop()
+                leftnode = build.pop()
+                build.append(Node(char))
+                build[-1].leftnode = leftnode
+                build[-1].rightnode = rightnode
         else:
-            # Si el token es un operador, saca operadores del stack y los agrega a la salida según su precedencia
-            while stack and precedence.get(stack[-1], 0) >= precedence.get(token, 0):
-                output.append(stack.pop())
-            stack.append(token)
+            build.append(Node(char, i+1, False)) #aqui va if char = epsilon: nullable = true else nullable = false
+        i += 1
 
-    # Vacía el stack al final
+    build[0].setPositions()
+    #return build[0] 
+
+def add_concatenation_dot(regex):
+    result = []  # Lista para almacenar la nueva expresión con puntos de concatenación
+    special_chars = {'|', '*', '(', ')'}  # Caracteres especiales en regex
+
+    for i in range(len(regex) - 1):
+        result.append(regex[i])
+        # Casos donde se necesita añadir un punto '.'
+        if (regex[i] not in special_chars and regex[i + 1] not in special_chars) or \
+            (regex[i] not in special_chars and regex[i + 1] == '(') or \
+            (regex[i] == ')' and regex[i + 1] not in special_chars) or \
+            (regex[i] == '*' and regex[i + 1] not in special_chars) or \
+            (regex[i] == '*' and regex[i + 1] == '('):
+            result.append('.')
+
+    result.append(regex[-1])  # Añadir el último carácter de la expresión regular
+    return ''.join(result)
+
+def shunting_yard(infix_expression):
+    parsed_expresion = add_concatenation_dot(infix_expression)
+    queue = []
+    stack = []
+
+    def get_precende(c):
+        if char == "*" : return 3
+        if char == "." : return 2
+        if char == "|" : return 1
+        return 0
+
+    i=0
+    for char in parsed_expresion:
+        if char.isalnum():
+            queue.append(char)
+        elif char in operators:
+            while (stack and stack[-1] in operators and get_precende(stack[-1]) >= get_precende(char)):
+                c = stack.pop()
+                queue.append(c)
+            stack.append(char)
+        elif char == '(':
+            stack.append(char)
+        elif char == ')':
+            while stack and stack[-1] != '(':
+                c=stack.pop()
+                queue.append(c)
+            c= stack.pop()
+        i+=1
+
     while stack:
-        output.append(stack.pop())
+        c=stack.pop()
+        queue.append(c)
+    
+    result = ""
 
-    return output
+    for c in queue:
+        result += c
+    return result
 
-def thompson_algorithm(postfix_expression):
+""" def thompson_algorithm(postfix_expression):
     # Algoritmo Thompson para construir un autómata finito no determinista (AFN)
     stack = []
 
@@ -182,7 +253,7 @@ def minimize_dfa(dfa):
     return Automaton(dfa_minimized_states, dfa.alphabet, dfa_minimized_transitions, dfa_minimized_start_state, dfa_minimized_accept_states)
 
 def draw_automaton(automaton, name="automaton"):
-    # Dibuja el autómata utilizando la biblioteca NetworkX y Matplotlib
+    # Dibuja el autómata
     G = nx.DiGraph()
 
     for state in automaton.states:
@@ -224,7 +295,7 @@ def simulate_automaton(automaton, input_string):
         current_states = move(current_states, symbol, automaton.transitions)
         current_states = epsilon_closure(current_states, automaton.transitions)
 
-    return current_states.intersection(automaton.accept_states)
+    return current_states.intersection(automaton.accept_states) """
 
 def main():
     # Función principal que solicita la expresión regular y la cadena de entrada, y realiza la simulación y minimización de autómatas
@@ -232,9 +303,11 @@ def main():
     input_string = input("Ingrese la cadena a validar: ")
 
     postfix_expression = shunting_yard(regex)
-    print(f"\nExpresión regular en notación postfix: {' '.join(postfix_expression)}")
+    #print(f"\nExpresión regular en notación postfix: {' '.join(postfix_expression)}")
 
-    afn = thompson_algorithm(postfix_expression)
+    build_tree(postfix_expression)
+
+    """ afn = thompson_algorithm(postfix_expression)
     draw_automaton(afn, name="AFN")
 
     afd = nfa_to_dfa(afn)
@@ -244,11 +317,11 @@ def main():
     draw_automaton(afd_minimized, name="Minimized AFD")
 
     afn_result = simulate_automaton(afn, input_string)
-    afd_result = simulate_automaton(afd_minimized, input_string)
+    afd_result = simulate_automaton(afd_minimized, input_string) """
 
     print("\nResultados:")
-    print(f"Cadena '{input_string}' pertenece al lenguaje definido por la expresión regular (AFN): {bool(afn_result)}")
-    print(f"Cadena '{input_string}' pertenece al lenguaje definido por la expresión regular (AFD): {bool(afd_result)}")
+    """ print(f"Cadena '{input_string}' pertenece al lenguaje definido por la expresión regular (AFN): {bool(afn_result)}")
+    print(f"Cadena '{input_string}' pertenece al lenguaje definido por la expresión regular (AFD): {bool(afd_result)}") """
 
 if __name__ == "__main__":
     main()

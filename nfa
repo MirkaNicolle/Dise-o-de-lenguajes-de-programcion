@@ -1,0 +1,39 @@
+digraph {
+	rankdir=LR
+	node [shape=circle]
+	20
+	node [shape=doublecircle]
+	20
+	20 -> 18 [label="ε"]
+	20 -> 21 [label="ε"]
+	node [shape=circle]
+	21
+	node [shape=circle]
+	18
+	18 -> 16 [label="ε"]
+	18 -> 19 [label="ε"]
+	18 -> 18 [label="ε"]
+	18 -> 21 [label="ε"]
+	node [shape=circle]
+	19
+	node [shape=circle]
+	16
+	16 -> 12 [label="ε"]
+	16 -> 14 [label="ε"]
+	16 -> 16 [label="ε"]
+	16 -> 19 [label="ε"]
+	node [shape=circle]
+	14
+	14 -> 15 [label=b]
+	14 -> 17 [label="ε"]
+	node [shape=circle]
+	17
+	node [shape=circle]
+	15
+	node [shape=circle]
+	12
+	12 -> 13 [label=a]
+	12 -> 17 [label="ε"]
+	node [shape=circle]
+	13
+}
