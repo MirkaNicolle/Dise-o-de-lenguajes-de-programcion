@@ -1,24 +1,5 @@
-from Thompson import regex_to_nfa
+from Thompson import regex_to_nfa, NFA, State
 import graphviz
-
-class State:
-    def __init__(self, accept=False):
-        self.accept = accept
-        self.transitions = {}
-
-    def add_transition(self, symbol, state):
-        if symbol in self.transitions:
-            self.transitions[symbol].append(state)
-        else:
-            self.transitions[symbol] = [state]
-
-class NFA:
-    def __init__(self, start_state):
-        self.start_state = start_state
-        self.states = [start_state]
-
-    def add_state(self, state):
-        self.states.append(state)
 
 def epsilon_closure(states):
     stack = list(states)
@@ -87,7 +68,7 @@ def main():
     nfa = regex_to_nfa(postfix_regex)
     if nfa:
         dfa = nfa_to_dfa(nfa)
-        visualize_automaton(dfa, 'DFA_Subset')
+        visualize_automaton(dfa, 'DFA Subset')
     else:
         print("Error al generar el NFA.")
 
