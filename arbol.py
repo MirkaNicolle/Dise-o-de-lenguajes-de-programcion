@@ -4,7 +4,7 @@ class Node:
         self.position = position
         self.firstposition = set()
         self.lastposition = set()
-        self.nextposition = set()
+        self.nextposition = {}
         self.nullable = nullable
         self.leftnode = None
         self.rightnode = None
@@ -15,9 +15,9 @@ class Node:
         if self.rightnode:
             self.rightnode.set_positions()
 
-        if self.char == 'ε':  # Manejo del carácter epsilon
+        if self.char == 'ε':  # Epsilon
             self.nullable = True
-        elif self.char.isalnum():
+        elif self.char.isalnum():  # Caracteres y dígitos
             self.firstposition = {self.position}
             self.lastposition = {self.position}
             self.nullable = False
@@ -25,22 +25,33 @@ class Node:
             self.firstposition = self.leftnode.firstposition | self.rightnode.firstposition
             self.lastposition = self.leftnode.lastposition | self.rightnode.lastposition
             self.nullable = self.leftnode.nullable or self.rightnode.nullable
-        elif self.char == '.':
+        elif self.char == '•':
             self.firstposition = self.leftnode.firstposition | (self.rightnode.firstposition if self.leftnode.nullable else set())
             self.lastposition = self.rightnode.lastposition | (self.leftnode.lastposition if self.rightnode.nullable else set())
             self.nullable = self.leftnode.nullable and self.rightnode.nullable
+            for pos in self.leftnode.lastposition:
+                for next_pos in self.rightnode.firstposition:
+                    if pos not in self.nextposition:
+                        self.nextposition[pos] = set()
+                    self.nextposition[pos].add(next_pos)
         elif self.char == '*':
             self.firstposition = self.leftnode.firstposition
             self.lastposition = self.leftnode.lastposition
             self.nullable = True
+            for pos in self.lastposition:
+                if pos not in self.nextposition:
+                    self.nextposition[pos] = set()
+                self.nextposition[pos].update(self.firstposition)
 
-        # Set nextposition for child nodes
-        if self.char == '•':
-            for position in self.leftnode.lastposition:
-                self.nextposition.update(self.rightnode.firstposition)
-        elif self.char == '*':
-            for position in self.lastposition:
-                self.nextposition.update(self.firstposition)
+
+        elif self.char == '+':
+            self.firstposition = self.leftnode.firstposition
+            self.lastposition = self.leftnode.lastposition
+            self.nullable = False
+            for pos in self.lastposition:
+                if pos not in self.nextposition:
+                    self.nextposition[pos] = set()
+                self.nextposition[pos].update(self.firstposition)
 
     def print_tree(self, indent="", result=None):
         if result is None:
@@ -61,11 +72,11 @@ def build_tree(expression):
     i = 0  # Índice para asignar posiciones a caracteres alfanuméricos
 
     for char in expression:
-        print(f"Carácter actual: {char}")
+        """print(f"Carácter actual: {char}")
         print("Contenido de la pila build antes de procesar el carácter:")
         for node in build:
             print(f"  Nodo: {node.char}")
-        print("-" * 20)
+        print("-" * 20)"""
 
         if char in operators:
             if char in ('+', '*', '?'):
