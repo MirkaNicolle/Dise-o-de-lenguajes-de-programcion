@@ -1,52 +1,51 @@
-from Thompson import regex_to_nfa, State, NFA
-from Subconjuntos import visualize_automaton, nfa_to_dfa
+'''El algoritmo de minimización para Autómatas Finitos Deterministas (AFD), reduce el número de estados al mínimo necesario para reconocer el mismo lenguaje'''
+
+from Thompson import regex_to_afn, State, AFN
+from Subconjuntos import visualize_automaton, afn_to_afd
 import graphviz
 
-def remove_unreachable_states(dfa):
-    reachable = set()
-    stack = [dfa.start_state]
-    while stack:
-        state = stack.pop()
-        if state not in reachable:
-            reachable.add(state)
-            for symbol in state.transitions:
-                stack.extend(state.transitions[symbol])
+def remove_unreachable_states(afd):
+    reachable = set()  #conjunto de estados alcanzables
+    stack = [afd.start_state]  #pila iniciada con el estado de inicio
+    while stack:  #mientras haya estados en la pila
+        state = stack.pop()  #extrae un estado de la pila
+        if state not in reachable:  #si el estado no esta marcado como alcanzable
+            reachable.add(state)  #marca el estado como alcanzable
+            for symbol in state.transitions:  #para cada simbolo en las transiciones del estado
+                stack.extend(state.transitions[symbol])  #adicion los estados destino a la pila
 
-    dfa.states = [state for state in dfa.states if state in reachable]
+    afd.states = [state for state in afd.states if state in reachable]  #filtra los estados no alcanzables
 
-def minimize_dfa(dfa):
-    remove_unreachable_states(dfa)
+'''minimizacion de afd'''
+def minimize_afd(afd):
+    remove_unreachable_states(afd)  #elimina estados no alcanzables
 
-    # Inicializar los conjuntos de estados: aceptación y no aceptación
-    P = {frozenset([s for s in dfa.states if s.accept]), frozenset([s for s in dfa.states if not s.accept])}
-    W = set(P)  # Conjuntos de trabajo, inicialmente igual a P
+    P = {frozenset([s for s in afd.states if s.accept]), frozenset([s for s in afd.states if not s.accept])} #inicializacion de los conjuntos de estados aceptacion y no aceptacion
+    B = set(P)  #conjuntos de trabajo, inicialmente igual a P
 
-    while W:
-        A = W.pop()
-        for symbol in set(sym for state in A for sym in state.transitions):
-            X = set(s for s in A if symbol in s.transitions and set(s.transitions[symbol]) & A)
-            for Y in P.copy():
-                intersect = X & Y
-                difference = Y - X
-                if intersect and difference:
-                    P.remove(Y)
-                    P.add(frozenset(intersect))
-                    P.add(frozenset(difference))
-                    if Y in W:
-                        W.remove(Y)
-                        W.add(frozenset(intersect))
-                        W.add(frozenset(difference))
+    while B:  #mientras haya elementos en B
+        A = B.pop()  #toma un conjunto de B
+        for symbol in set(sym for state in A for sym in state.transitions):  #para cada simbolo de las transiciones de A
+            C = set(s for s in A if symbol in s.transitions and set(s.transitions[symbol]) & A)  #estados de A con transiciones por el simbolo que quedan en A
+            for D in P.copy():  
+                intersect = C & D  #interseccion de C y D
+                difference = D - C  #diferencia de D y C
+                if intersect and difference:  #si ambos subconjuntos son no vacios
+                    P.remove(D)  #elimina el conjunto viejo
+                    P.add(frozenset(intersect))  #adicion a la interseccion como nuevo conjunto
+                    P.add(frozenset(difference))  #adicion a la diferencia como nuevo conjunto
+                    if D in B:
+                        B.remove(D)  #actualiza B removiendo el conjunto viejo
+                        B.add(frozenset(intersect))  #adicion a los nuevos conjuntos a B
+                        B.add(frozenset(difference))
                     else:
-                        W.add(frozenset(intersect) if len(intersect) <= len(difference) else frozenset(difference))
+                        B.add(frozenset(intersect) if len(intersect) <= len(difference) else frozenset(difference)) #adicion al subconjunto mas pequeño a B
 
-    # Crear nuevos estados para el DFA minimizado
-    new_states = {frozenset(group): State(any(s.accept for s in group)) for group in P}
-    start_state = next(new_states[frozenset(group)] for group in P if dfa.start_state in group)
+    new_states = {frozenset(group): State(any(s.accept for s in group)) for group in P} #crea nuevos estados para el afd minimizado
+    start_state = next(new_states[frozenset(group)] for group in P if afd.start_state in group)  #estado inicial del afd minimizado
 
-    # Reconstruir las transiciones asegurándose de no duplicar
-    for group, new_state in new_states.items():
+    for group, new_state in new_states.items(): #reconstruccion de transiciones sin duplicar
         for symbol in set(sym for state in group for sym in state.transitions):
-            # Calcula el conjunto destino para el símbolo actual
             target_set = set()
             for state in group:
                 if symbol in state.transitions:
@@ -54,46 +53,45 @@ def minimize_dfa(dfa):
                         target_group = next(g for g in P if target in g)
                         target_set.add(new_states[frozenset(target_group)])
 
-            # Agrega una única transición a cada estado destino
             for target in target_set:
-                new_state.add_transition(symbol, target)
+                new_state.add_transition(symbol, target)  #añade una unica transicion a cada estado destino
 
-    return NFA(start_state)
+    return AFN(start_state)
 
 def visualize_automaton(automaton, filename='Automaton'):
     dot = graphviz.Digraph(format='png')
-    seen = set()
+    seen = set()  #conjunto de estados ya visitados
     state_names = {}
 
     def visualize(state):
         if state in seen:
-            return
-        seen.add(state)
-        state_name = f'S{len(seen)}'
-        state_names[state] = state_name
+            return  #si el estado ya fue visitado, retorna
+        seen.add(state)  #marca el estado como visualizado o visitado
+        state_name = f'S{len(seen)}'  #asigna un nombre al estado
+        state_names[state] = state_name  #guarda el nombre del estado
         if state.accept:
             dot.node(state_name, shape='doublecircle')
         else:
-            dot.node(state_name)
+            dot.node(state_name)  #visualiza como un circulo normal
         for symbol, states in state.transitions.items():
             for s in states:
                 if s not in seen:
-                    visualize(s)
-                dot.edge(state_name, state_names[s], label=symbol if symbol else 'ε')
+                    visualize(s)  #visualiza el estado destino
+                dot.edge(state_name, state_names[s], label=symbol if symbol else 'ε') #añade una arista al grafo
 
     visualize(automaton.start_state)
-    dot.render(filename, view=True)
+    dot.render(filename, view=True)  
 
 def main():
     with open('postfix.txt', 'r') as file:
-        postfix_regex = file.read().strip()
-    nfa = regex_to_nfa(postfix_regex)
-    if nfa:
-        dfa = nfa_to_dfa(nfa)  # Asegúrate de que esta función retorna un objeto NFA que representa el DFA
-        minimized_dfa = minimize_dfa(dfa)
-        visualize_automaton(minimized_dfa, 'Minimized DFA')
+        postfix_regex = file.read().strip() 
+    afn = regex_to_afn(postfix_regex)
+    if afn:
+        afd = afn_to_afd(afn) 
+        minimized_afd = minimize_afd(afd)
+        visualize_automaton(minimized_afd, 'Minimizacion AFD') 
     else:
-        print("Error al generar el NFA.")
+        print("error al generar el afn")  
 
 if __name__ == '__main__':
-    main()
+    main()  
