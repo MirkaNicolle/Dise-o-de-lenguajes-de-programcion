@@ -1,120 +1,109 @@
+'''Este metodo construye el AFD directamente a partir de una expresion regular analizada, utilizando la estructura de un arbol sintactico'''
+
 from Thompson import State
-from arbol import build_tree  # Asumimos que esta función devuelve un árbol sintáctico con métodos de cálculo de posición
+from arbol import build_tree
 import graphviz
 
 class AFD:
     def __init__(self, start_state):
-        self.start_state = start_state
-        self.states = [start_state]
+        self.start_state = start_state  #establece el estado inicial del afd
+        self.states = [start_state]  #inicializa la lista de estados con el estado inicial
 
     def add_state(self, state):
-        if state not in self.states:
-            self.states.append(state)
+        if state not in self.states:  #verifica si el estado no está ya en la lista de estados
+            self.states.append(state)  #añade el estado a la lista de estados del afd
 
 def find_node_by_position(node, position):
-    # Si el nodo actual tiene la posición buscada, retornarlo
-    if node.position == position:
+    if node.position == position: #si el nodo actual tiene la posicion buscada, retornarlo
         return node
-    # De lo contrario, buscar recursivamente en los nodos hijos
-    found_node = None
+    found_node = None #de lo contrario, buscar recursivamente en los nodos hijos
     if node.leftnode:
-        found_node = find_node_by_position(node.leftnode, position)
+        found_node = find_node_by_position(node.leftnode, position)  #busca en el hijo izquierdo
         if found_node:
             return found_node
     if node.rightnode:
-        found_node = find_node_by_position(node.rightnode, position)
+        found_node = find_node_by_position(node.rightnode, position)  #busca en el hijo derecho
         if found_node:
             return found_node
-    return found_node
+    return found_node  #retorna el nodo encontrado o None si no se encuentra
 
+'''contruccion de afd directo'''
 def build_direct_afd(root):
-    # Calcular los conjuntos de posición iniciales del árbol sintáctico
-    root.set_positions()
+    root.set_positions() #calcular los conjuntos de posicion iniciales del arbol sintactico
 
-    # Las posiciones iniciales determinan el estado inicial del AFD
-    initial_positions = frozenset(root.firstposition)
-    print(f"Initial positions: {initial_positions}")
+    initial_positions = frozenset(root.firstposition) #las posiciones iniciales determinan el estado inicial del afd
+    #print(f"Initial positions: {initial_positions}") 
     
-    # El estado inicial se determina si está en las últimas posiciones de la raíz
-    start_state = State(accept=0 in root.lastposition)
-    afd = AFD(start_state)
+    start_state = State(accept=0 in root.lastposition) #el estado inicial se determina si esta en las ultimas posiciones de la raiz
+    afd = AFD(start_state)  #crea un afd con el estado inicial
 
-    # Diccionario para seguir los estados ya creados
-    states = {initial_positions: start_state}
-    # Lista de estados por procesar
-    process = [initial_positions]
+    states = {initial_positions: start_state} #diccionario para seguir los estados ya creados
+    process = [initial_positions] #lista de estados por procesar
 
-    # Procesar todos los estados pendientes
-    while process:
-        current_positions = process.pop()
-        print(f"Processing state with positions: {current_positions}")
+    while process: #procesar todos los estados pendientes
+        current_positions = process.pop()  #toma el conjunto actual de posiciones
+        #print(f"Processing state with positions: {current_positions}")
         current_state = states[current_positions]
 
-        # Diccionario para mantener las transiciones agrupadas por símbolo
-        transitions = {}
+        transitions = {} #diccionario para mantener las transiciones agrupadas por simbolo
         for pos in current_positions:
-            node = find_node_by_position(root, pos)
+            node = find_node_by_position(root, pos)  #encuentra el nodo por posicion
             if not node:
-                print(f"No node found for position: {pos}")
+                #print(f"No node found for position: {pos}")
                 continue
-            print(f"Node {node.char} at position {pos} has next positions: {node.nextposition}")
+            #print(f"Node {node.char} at position {pos} has next positions: {node.nextposition}")
             for symbol, next_positions in node.nextposition.items():
                 if symbol in transitions:
-                    transitions[symbol].update(next_positions)
+                    transitions[symbol].update(next_positions)  #actualiza el conjunto de posiciones para el simbolo
                 else:
-                    transitions[symbol] = set(next_positions)
+                    transitions[symbol] = set(next_positions)  #crea un nuevo conjunto de posiciones para el simbolo
 
-        print(f"Transitions from state {current_positions}: {transitions}")
+        #print(f"Transitions from state {current_positions}: {transitions}")
         for symbol, next_positions in transitions.items():
             next_positions_frozenset = frozenset(next_positions)
             if next_positions_frozenset not in states:
                 accept = any(pos in root.lastposition for pos in next_positions_frozenset)
                 new_state = State(accept)
-                states[next_positions_frozenset] = new_state
-                afd.add_state(new_state)
+                states[next_positions_frozenset] = new_state  #añade el nuevo estado al diccionario de estados
+                afd.add_state(new_state)  #añade el nuevo estado al afd
                 process.append(next_positions_frozenset)
-            current_state.add_transition(symbol, states[next_positions_frozenset])
+            current_state.add_transition(symbol, states[next_positions_frozenset])  #añade una transicion al estado actual
 
-    return afd
+    return afd  # retorna el afd construido
 
 def visualize_afd(afd):
     dot = graphviz.Digraph(format='png')
-    seen = set()
+    seen = set()  #conjunto de estados ya visualizados
     state_names = {}
 
     def visualize(state):
         if state in seen:
-            return
-        seen.add(state)
-        state_name = 'S' + str(len(seen))
-        state_names[state] = state_name
+            return  #si el estado ya fue visualizado, retorna
+        seen.add(state)  #marca el estado como visualizado
+        state_name = 'S' + str(len(seen))  #genera un nombre para el estado
+        state_names[state] = state_name  #asigna el nombre al estado
         if state.accept:
-            dot.node(state_name, shape='doublecircle')
+            dot.node(state_name, shape='doublecircle')  #visualiza como un doble circulo si es de aceptacion
         else:
-            dot.node(state_name)
+            dot.node(state_name)  #visualiza como un circulo normal si no es de aceptacion
         for symbol, states in state.transitions.items():
             for s in states:
                 if s not in seen:
-                    visualize(s)
-                dot.edge(state_name, state_names[s], label=symbol)
+                    visualize(s)  #visualiza el estado destino si no ha sido visualizado
+                dot.edge(state_name, state_names[s], label=symbol)  #añade una arista al grafo
 
-    visualize(afd.start_state)
-    dot.render('Direct AFD', view=True)
+    visualize(afd.start_state)  #visualizacion del grafo
+    dot.render('AFD Directo', view=True)  
 
 def main():
     with open('postfix.txt', 'r') as file:
         postfix_expr = file.read().strip()
 
-    # Construir el árbol sintáctico
-    syntax_tree = build_tree(postfix_expr)
-    
-    # Asegúrate de que el árbol tiene sus posiciones calculadas
+    syntax_tree = build_tree(postfix_expr) #construccion de el árbol sintáctico
     syntax_tree.set_positions()
+    
+    afd = build_direct_afd(syntax_tree) #creacion de afd directo
 
-    # Construir AFD directamente desde el árbol sintáctico
-    afd = build_direct_afd(syntax_tree)
-
-    # Visualizar el AFD
     visualize_afd(afd)
 
 if __name__ == "__main__":
