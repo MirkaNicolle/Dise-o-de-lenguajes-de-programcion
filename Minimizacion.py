@@ -5,46 +5,42 @@ from Subconjuntos import visualize_automaton, afn_to_afd
 import graphviz
 
 def remove_unreachable_states(afd):
-    reachable = set()  #conjunto de estados alcanzables
-    stack = [afd.start_state]  #pila iniciada con el estado de inicio
-    while stack:  #mientras haya estados en la pila
-        state = stack.pop()  #extrae un estado de la pila
-        if state not in reachable:  #si el estado no esta marcado como alcanzable
-            reachable.add(state)  #marca el estado como alcanzable
-            for symbol in state.transitions:  #para cada simbolo en las transiciones del estado
-                stack.extend(state.transitions[symbol])  #adicion los estados destino a la pila
+    reachable = set()
+    stack = [afd.start_state]
+    while stack:
+        state = stack.pop()
+        if state not in reachable:
+            reachable.add(state)
+            for symbol in state.transitions:
+                stack.extend(state.transitions[symbol])
+    afd.states = [state for state in afd.states if state in reachable]
 
-    afd.states = [state for state in afd.states if state in reachable]  #filtra los estados no alcanzables
-
-'''minimizacion de afd'''
 def minimize_afd(afd):
-    remove_unreachable_states(afd)  #elimina estados no alcanzables
+    remove_unreachable_states(afd)
+    P = {frozenset([s for s in afd.states if s.accept]), frozenset([s for s in afd.states if not s.accept])}
+    B = set(P)
 
-    P = {frozenset([s for s in afd.states if s.accept]), frozenset([s for s in afd.states if not s.accept])} #inicializacion de los conjuntos de estados aceptacion y no aceptacion
-    B = set(P)  #conjuntos de trabajo, inicialmente igual a P
-
-    while B:  #mientras haya elementos en B
-        A = B.pop()  #toma un conjunto de B
-        for symbol in set(sym for state in A for sym in state.transitions):  #para cada simbolo de las transiciones de A
-            C = set(s for s in A if symbol in s.transitions and set(s.transitions[symbol]) & A)  #estados de A con transiciones por el simbolo que quedan en A
-            for D in P.copy():  
-                intersect = C & D  #interseccion de C y D
-                difference = D - C  #diferencia de D y C
-                if intersect and difference:  #si ambos subconjuntos son no vacios
-                    P.remove(D)  #elimina el conjunto viejo
-                    P.add(frozenset(intersect))  #adicion a la interseccion como nuevo conjunto
-                    P.add(frozenset(difference))  #adicion a la diferencia como nuevo conjunto
+    while B:
+        A = B.pop()
+        for symbol in set(sym for state in A for sym in state.transitions):
+            C = set(s for s in A if symbol in s.transitions and set(s.transitions[symbol]) & A)
+            for D in P.copy():
+                intersect = C & D
+                difference = D - C
+                if intersect and difference:
+                    P.remove(D)
+                    P.add(frozenset(intersect))
+                    P.add(frozenset(difference))
                     if D in B:
-                        B.remove(D)  #actualiza B removiendo el conjunto viejo
-                        B.add(frozenset(intersect))  #adicion a los nuevos conjuntos a B
+                        B.remove(D)
+                        B.add(frozenset(intersect))
                         B.add(frozenset(difference))
                     else:
-                        B.add(frozenset(intersect) if len(intersect) <= len(difference) else frozenset(difference)) #adicion al subconjunto mas pequeño a B
+                        B.add(frozenset(intersect) if len(intersect) <= len(difference) else frozenset(difference))
 
-    new_states = {frozenset(group): State(any(s.accept for s in group)) for group in P} #crea nuevos estados para el afd minimizado
-    start_state = next(new_states[frozenset(group)] for group in P if afd.start_state in group)  #estado inicial del afd minimizado
-
-    for group, new_state in new_states.items(): #reconstruccion de transiciones sin duplicar
+    new_states = {frozenset(group): State(any(s.accept for s in group)) for group in P}
+    start_state = next(new_states[frozenset(group)] for group in P if afd.start_state in group)
+    for group, new_state in new_states.items():
         for symbol in set(sym for state in group for sym in state.transitions):
             target_set = set()
             for state in group:
@@ -52,46 +48,62 @@ def minimize_afd(afd):
                     for target in state.transitions[symbol]:
                         target_group = next(g for g in P if target in g)
                         target_set.add(new_states[frozenset(target_group)])
-
             for target in target_set:
-                new_state.add_transition(symbol, target)  #añade una unica transicion a cada estado destino
+                new_state.add_transition(symbol, target)
 
     return AFN(start_state)
 
 def visualize_automaton(automaton, filename='Automaton'):
     dot = graphviz.Digraph(format='png')
-    seen = set()  #conjunto de estados ya visitados
+    seen = set()
     state_names = {}
+
+    def escape_label(text):
+        # Escapar los caracteres especiales para Graphviz
+        # Esta función ahora también escapa explícitamente el caret (^) y las comillas dobles dentro de los nombres de estado o símbolos.
+        return (text.replace('\\', '\\\\')  # Escapa el backslash
+                .replace('"', '\\"')    # Escapa las comillas dobles
+                .replace('\n', '\\n')   # Escapa los saltos de línea
+                .replace('^', '\\^')    # Escapa el caret
+                .replace('{', '\\{')    # Escapa llaves abiertas
+                .replace('}', '\\}'))   # Escapa llaves cerradas
 
     def visualize(state):
         if state in seen:
-            return  #si el estado ya fue visitado, retorna
-        seen.add(state)  #marca el estado como visualizado o visitado
-        state_name = f'S{len(seen)}'  #asigna un nombre al estado
-        state_names[state] = state_name  #guarda el nombre del estado
+            return
+        seen.add(state)
+        state_name = f'S{len(seen)}'
+        state_names[state] = state_name
         if state.accept:
             dot.node(state_name, shape='doublecircle')
         else:
-            dot.node(state_name)  #visualiza como un circulo normal
+            dot.node(state_name)
         for symbol, states in state.transitions.items():
             for s in states:
                 if s not in seen:
-                    visualize(s)  #visualiza el estado destino
-                dot.edge(state_name, state_names[s], label=symbol if symbol else 'ε') #añade una arista al grafo
+                    visualize(s)
+                label = escape_label(symbol) if symbol is not None else 'ε'
+                dot.edge(state_name, state_names[s], label=label)
 
     visualize(automaton.start_state)
-    dot.render(filename, view=True)  
+    dot.render(filename, view=True)
+
+def process_yalex_file(input_path):
+    with open(input_path, 'r') as file:
+        for line in file:
+            if ':=' in line:
+                token_name, regex = line.split(':=')
+                regex = regex.strip()
+                afn = regex_to_afn(regex)
+                if afn:
+                    afd = afn_to_afd(afn)
+                    minimized_afd = minimize_afd(afd)
+                    visualize_automaton(minimized_afd, f'Minimizacion_AFD_{token_name}')
+                else:
+                    print(f"Error al generar el AFN para el token: {token_name}")
 
 def main():
-    with open('postfix.txt', 'r') as file:
-        postfix_regex = file.read().strip() 
-    afn = regex_to_afn(postfix_regex)
-    if afn:
-        afd = afn_to_afd(afn) 
-        minimized_afd = minimize_afd(afd)
-        visualize_automaton(minimized_afd, 'Minimizacion AFD') 
-    else:
-        print("error al generar el afn")  
+    process_yalex_file('output_postfix.yalex')
 
 if __name__ == '__main__':
-    main()  
+    main() 
