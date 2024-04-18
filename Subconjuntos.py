@@ -7,76 +7,93 @@ import graphviz
 
 '''manejo de epsilon'''
 def epsilon_closure(states):
-    stack = list(states)  #inicia una pila con los estados iniciales
-    closure = set(states)  #crea un conjunto para el cierre epsilon
-    while stack:  #mientras la pila no esté vacía
-        state = stack.pop()  #extrae un estado de la pila
-        if None in state.transitions:  #si hay transiciones epsilon para el estado
-            for next_state in state.transitions[None]:  #itera sobre cada estado alcanzable por epsilon
-                if next_state not in closure:  #si el estado no está ya en el cierre
-                    closure.add(next_state)  #añade el estado al cierre
-                    stack.append(next_state)  #apila el estado para su procesamiento
-    return closure  #retorna el cierre epsilon de los estados
+    stack = list(states)
+    closure = set(states)
+    while stack:
+        state = stack.pop()
+        if None in state.transitions:
+            for next_state in state.transitions[None]:
+                if next_state not in closure:
+                    closure.add(next_state)
+                    stack.append(next_state)
+    return closure
 
 def move(states, symbol):
-    next_states = set()  #conjunto para los proximos estados
-    for state in states:  #para cada estado en el conjunto actual
-        if symbol in state.transitions:  #si el simbolo está en las transiciones del estado
-            next_states.update(state.transitions[symbol])  #añade los estados destino al conjunto
-    return next_states  #retorna el conjunto de estados alcanzables por el símbolo
+    next_states = set()
+    for state in states:
+        if symbol in state.transitions:
+            next_states.update(state.transitions[symbol])
+    return next_states
 
-'''conversion afn a afd'''
 def afn_to_afd(afn):
-    initial_closure = epsilon_closure([afn.start_state])  #obtiene el cierre epsilon del estado inicial
-    unmarked = [initial_closure]  #lista de cierres no marcados
-    afd_states = {frozenset(initial_closure): State(any(s.accept for s in initial_closure))}  #diccionario de estados del afd
-    afd = AFN(afd_states[frozenset(initial_closure)])  #crea el afd
+    initial_closure = epsilon_closure([afn.start_state])
+    unmarked = [initial_closure]
+    afd_states = {frozenset(initial_closure): State(any(s.accept for s in initial_closure))}
+    afd = AFN(afd_states[frozenset(initial_closure)])  # Crea el AFD con el estado inicial
 
-    while unmarked:  #mientras haya cierres no marcados
-        current = unmarked.pop()  #obtiene un cierre no marcado
-        for symbol in set(sym for state in current for sym in state.transitions if sym is not None):  #para cada símbolo en las transiciones de los estados en el cierre
-            move_closure = epsilon_closure(move(current, symbol))  #obtiene el cierre epsilon de los estados alcanzados por el símbolo
-            frozenset_closure = frozenset(move_closure)  #hace un conjunto inmutable del cierre
-            if frozenset_closure not in afd_states:  #si el cierre no está en los estados del afd
-                afd_states[frozenset_closure] = State(any(s.accept for s in move_closure))  #crea un nuevo estado en el afd
-                unmarked.append(move_closure)  #marca el nuevo cierre para procesamiento
-                afd.add_state(afd_states[frozenset_closure])  #añade el nuevo estado al afd
-            afd_states[frozenset(current)].add_transition(symbol, afd_states[frozenset_closure])  #añade la transición en el afd
-    return afd  # retorna el afd
+    while unmarked:
+        current = unmarked.pop()
+        current_state = afd_states[frozenset(current)]
+        for symbol in set(sym for state in current for sym in state.transitions if sym is not None):
+            move_closure = epsilon_closure(move(current, symbol))
+            frozenset_closure = frozenset(move_closure)
+            if frozenset_closure not in afd_states:
+                afd_states[frozenset_closure] = State(any(s.accept for s in move_closure))
+                unmarked.append(move_closure)
+                afd.states.append(afd_states[frozenset_closure])
+            target_state = afd_states[frozenset_closure]
+            current_state.add_transition(symbol, target_state)
+    return afd
 
 def visualize_automaton(automaton, filename='Automaton'):
-    dot = graphviz.Digraph(format='png')  #crea un grafico dirigido para visualizacion
-    seen = set()  #conjunto de estados ya visualizados
-    state_names = {}  #diccionario de nombres de estados
-    
+    dot = graphviz.Digraph(format='png')
+    seen = set()
+    state_names = {}
+
+    def escape_label(text):
+        # Escapar los caracteres especiales para Graphviz
+        return (text.replace('\\', '\\\\')  # Escapa el backslash
+                .replace('"', '\\"')    # Escapa las comillas dobles
+                .replace('\n', '\\n')   # Escapa los saltos de línea
+                .replace('^', '\\^'))   # Escapa el caret
+
     def visualize(state):
-        if state in seen:  #si el estado ya fue visualizado, retorna
+        if state in seen:
             return
-        seen.add(state)  #marca el estado como visualizado
-        state_name = f'S{len(seen)}'  #asigna un nombre al estado
-        state_names[state] = state_name  #guarda el nombre del estado
-        if state.accept:  #si el estado es de aceptación
-            dot.node(state_name, shape='doublecircle')  #visualiza como un doble círculo
+        seen.add(state)
+        state_name = f'S{len(seen)}'
+        state_names[state] = state_name
+        if state.accept:
+            dot.node(state_name, shape='doublecircle')
         else:
-            dot.node(state_name)  #visualiza como un circulo normal
-        for symbol, states in state.transitions.items():  
-            for s in states:  #para cada estado destino en la transición
-                if s not in seen:  #si el estado destino no ha sido visualizado
-                    visualize(s)  #visualizacion del estado destino
-                dot.edge(state_name, state_names[s], label=symbol if symbol else 'ε')  #añade una arista al grafico
-    
-    visualize(automaton.start_state) 
-    dot.render(filename, view=True)  
+            dot.node(state_name)
+        for symbol, states in state.transitions.items():
+            for s in states:
+                if s not in seen:
+                    visualize(s)
+                label = escape_label(symbol) if symbol is not None else 'ε'
+                dot.edge(state_name, state_names[s], label=label)
+
+    visualize(automaton.start_state)
+    output_path = f'{filename}.gv'
+    dot.render(output_path, view=True)
+    #print(f"Automaton visualized in: {output_path}.png")
+
+def process_yalex_file(input_path):
+    with open(input_path, 'r') as file:
+        for line in file:
+            if ':=' in line:
+                token_name, regex = line.split(':=')
+                regex = regex.strip()
+                afn = regex_to_afn(regex)
+                if afn:
+                    afd = afn_to_afd(afn)
+                    visualize_automaton(afd, f'Subconjuntos_AFD_{token_name}')
+                else:
+                    print(f"Error al generar el AFN para el token: {token_name}")
 
 def main():
-    with open('postfix.txt', 'r') as file:  
-        postfix_regex = file.read().strip()  
-    afn = regex_to_afn(postfix_regex)  #conversion a afd
-    if afn: 
-        afd = afn_to_afd(afn)  #convierte el afn a afd
-        visualize_automaton(afd, 'Subconjuntos AFD')
-    else: 
-        print("error al generar el afn")
+    process_yalex_file('output_postfix.yalex')
 
 if __name__ == '__main__':
     main()
