@@ -2,83 +2,84 @@
 
 import graphviz
 
-'''representa un estado dentro de un afn. cada estado puede tener multiples transiciones a otros estados'''
 class State:
     def __init__(self, accept=False):
-        self.accept = accept  #muestra si el estado es de aceptacion
-        self.transitions = {}  #diccionario para transiciones: clave = simbolo, valor = lista de estados destintos
+        self.accept = accept
+        self.transitions = {}
 
-    '''añade una transicion desde este estado a otro estado segun un simbolo'''
     def add_transition(self, symbol, state):
         if symbol in self.transitions:
-            self.transitions[symbol].append(state)  #si el simbolo ya existe en el diccionario, agrega el estado a la lista
+            self.transitions[symbol].append(state)
         else:
-            self.transitions[symbol] = [state]  #si el simbolo no existe, crea una nueva entrada en el diccionario
+            self.transitions[symbol] = [state]
 
-'''representacion un automata finito no determinista (afn)'''
 class AFN:
     def __init__(self, start_state):
-        self.start_state = start_state  #estado inicial del afn
-        self.states = [start_state]  #lista de estados que comienza con el estado inicial
+        self.start_state = start_state  # Estado inicial del AFN
+        self.states = [start_state]     # Lista de estados que comienza con el estado inicial
 
     def add_state(self, state):
-        self.states.append(state)  #añade un nuevo estado a la lista de estados
+        if state not in self.states:
+            self.states.append(state)   # Añade un nuevo estado a la lista de estados si aún no está presente
 
-'''conversion postfix a un afn utilizando mcnaughton-yamada-thompson'''
+    def add_transition(self, from_state, to_state, symbol):
+        # Asegúrate de que tanto from_state como to_state estén en self.states
+        if from_state in self.states and to_state in self.states:
+            from_state.add_transition(symbol, to_state)  # Añade la transición usando el método definido en la clase State
+
 def regex_to_afn(postfix_regex):
-    stack = []  #pila para construir subcomponentes del afn
-    state_id = 1  #iniciar los ids de estado desde 1
-
-    for char in postfix_regex:
-        if char.isalnum():  #simbolo
+    stack = []
+    i = 0
+    while i < len(postfix_regex):
+        char = postfix_regex[i]
+        if char.isalnum():  # Manejo simple de caracteres alfanuméricos
             start = State()
             end = State(True)
-            start.add_transition(char, end)  #crea una transicion entre un estado inicial y un estado de aceptacion
-            stack.append((start, end))  #empuja la pareja de estados al stack
-        elif char == '|':  #union
-            afn2 = stack.pop()
-            afn1 = stack.pop()
-            start = State()
-            end = State(True)
-            start.add_transition(None, afn1[0])
-            start.add_transition(None, afn2[0])  #crea transiciones epsilon desde el nuevo estado inicial a los estados iniciales de afn1 y afn2
-            afn1[1].accept = False
-            afn2[1].accept = False
-            afn1[1].add_transition(None, end)
-            afn2[1].add_transition(None, end)  #desactiva la aceptacion en los estados finales de afn1 y afn2 y los conecta al nuevo estado final
+            start.add_transition(char, end)
             stack.append((start, end))
-        elif char == '.' or char == '•':  #concatenacion
-            afn2 = stack.pop()
-            afn1 = stack.pop()
-            afn1[1].accept = False
-            afn1[1].add_transition(None, afn2[0])  #conecta el estado final de afn1 al estado inicial de afn2
-            stack.append((afn1[0], afn2[1]))  #el resultado es un afn que va desde el estado inicial de afn1 al estado final de afn2
-        elif char == '*':  #cierre de kleene
+        elif char == '[':  # Inicio de una clase de caracteres
+            start = State()
+            end = State(True)
+            i += 1
+            char_class = []
+            while postfix_regex[i] != ']':
+                if postfix_regex[i] == '\\':  # Escape dentro de la clase
+                    i += 1
+                char_class.append(postfix_regex[i])
+                i += 1
+            start.add_transition("".join(char_class), end)
+            stack.append((start, end))
+            i += 1  # Moverse más allá del ']' para continuar procesamiento
+        elif char in ['*', '+']:  # Operadores de repetición
             afn = stack.pop()
             start = State()
             end = State(True)
             start.add_transition(None, afn[0])
-            start.add_transition(None, end)  #el nuevo estado inicial tiene transiciones epsilon a el estado inicial del sub-afn y al nuevo estado final
-            afn[1].accept = False
+            afn[1].add_transition(None, end)
+            if char == '*':
+                start.add_transition(None, end)
             afn[1].add_transition(None, afn[0])
-            afn[1].add_transition(None, end)  #el estado final del sub-afn se conecta de nuevo a su estado inicial y al estado final
             stack.append((start, end))
+        i += 1
 
     if stack:
         afn = stack.pop()
-        return AFN(afn[0])  #afn construido
+        return AFN(afn[0])
     return None
 
-def visualize_afn(afn):
+def visualize_afn(afn, token_name):
     dot = graphviz.Digraph(format='png')
     seen = set()
     state_names = {}
+
+    def escape_label(text):
+        return text.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
 
     def visualize(state):
         if state in seen:
             return
         seen.add(state)
-        state_name = 'S' + str(len(seen)) #nombre secuencial simple para cada estado antes de procesar las transiciones
+        state_name = 'S' + str(len(seen))
         state_names[state] = state_name
         if state.accept:
             dot.node(state_name, shape='doublecircle')
@@ -86,22 +87,27 @@ def visualize_afn(afn):
             dot.node(state_name)
         for symbol, states in state.transitions.items():
             for s in states:
-                if s not in seen: #comprobacion del estado destino tambien sea procesado y añadido a state_names
+                if s not in seen:
                     visualize(s)
-                label = symbol if symbol is not None else 'ε'
+                label = escape_label(symbol) if symbol is not None else 'ε'
                 dot.edge(state_name, state_names[s], label=label)
 
     visualize(afn.start_state)
-    dot.render('Thompson AFN', view=True)
+    dot.render(f'Thompson_AFN_{token_name}', view=True)
+
+def process_yalex_file(input_path):
+    with open(input_path, 'r') as file:
+        for line in file:
+            if ':=' in line:
+                token_name, regex = line.split(':=')
+                afn = regex_to_afn(regex.strip())
+                if afn:
+                    visualize_afn(afn, token_name)
+                else:
+                    print(f"Error al generar el AFN para el token: {token_name}")
 
 def main():
-    with open('postfix.txt', 'r') as file:
-        postfix_regex = file.read().strip()
-    afn = regex_to_afn(postfix_regex)
-    if afn:
-        visualize_afn(afn)
-    else:
-        print("error al generar el afn.")
+    process_yalex_file('output_postfix.yalex')
 
 if __name__ == '__main__':
     main()
