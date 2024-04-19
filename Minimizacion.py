@@ -53,20 +53,17 @@ def minimize_afd(afd):
 
     return AFN(start_state)
 
-def visualize_automaton(automaton, filename='Automaton'):
-    dot = graphviz.Digraph(format='png')
+def visualize_automaton(automaton, token_name, all_graphs):
+    dot = graphviz.Digraph(name=f"digraph_afd_{token_name}", format='plain')
     seen = set()
     state_names = {}
 
     def escape_label(text):
         # Escapar los caracteres especiales para Graphviz
-        # Esta función ahora también escapa explícitamente el caret (^) y las comillas dobles dentro de los nombres de estado o símbolos.
         return (text.replace('\\', '\\\\')  # Escapa el backslash
                 .replace('"', '\\"')    # Escapa las comillas dobles
                 .replace('\n', '\\n')   # Escapa los saltos de línea
-                .replace('^', '\\^')    # Escapa el caret
-                .replace('{', '\\{')    # Escapa llaves abiertas
-                .replace('}', '\\}'))   # Escapa llaves cerradas
+                .replace('^', '\\^'))   # Escapa el caret
 
     def visualize(state):
         if state in seen:
@@ -86,9 +83,10 @@ def visualize_automaton(automaton, filename='Automaton'):
                 dot.edge(state_name, state_names[s], label=label)
 
     visualize(automaton.start_state)
-    dot.render(filename, view=True)
+    all_graphs.append(dot.source)  # Agregar el grafo al listado general
 
-def process_yalex_file(input_path):
+def process_yalex_file(input_path, output_filename):
+    all_graphs = []  # Lista para acumular todos los grafos
     with open(input_path, 'r') as file:
         for line in file:
             if ':=' in line:
@@ -98,12 +96,13 @@ def process_yalex_file(input_path):
                 if afn:
                     afd = afn_to_afd(afn)
                     minimized_afd = minimize_afd(afd)
-                    visualize_automaton(minimized_afd, f'Minimizacion_AFD_{token_name}')
+                    visualize_automaton(minimized_afd, token_name, all_graphs)
                 else:
                     print(f"Error al generar el AFN para el token: {token_name}")
 
-def main():
-    process_yalex_file('output_postfix.yalex')
+    # Guardar todos los grafos en un archivo
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        f.write("\n".join(all_graphs))
 
-if __name__ == '__main__':
-    main() 
+def main(input_path, output_path):
+    process_yalex_file(input_path, output_path)
