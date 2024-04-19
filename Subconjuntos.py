@@ -2,10 +2,10 @@
 Para cada nuevo estado del AFD se determina el conjunto de estados alcanzables desde cualquier estado en el conjunto actual al consumir el símbolo
 Si el conjunto resultante es nuevo, se agrega como un nuevo estado en el AFD.'''
 
-from Thompson import regex_to_afn, AFN, State
 import graphviz
 
-'''manejo de epsilon'''
+from Thompson import regex_to_afn, State, AFN
+
 def epsilon_closure(states):
     stack = list(states)
     closure = set(states)
@@ -45,17 +45,19 @@ def afn_to_afd(afn):
             current_state.add_transition(symbol, target_state)
     return afd
 
-def visualize_automaton(automaton, filename='Automaton'):
-    dot = graphviz.Digraph(format='png')
+def escape_label(text):
+    # Escapa caracteres que podrían interferir con la sintaxis de Graphviz
+    return (text.replace('\\', '\\\\')  # Duplica los backslashes
+            .replace('"', '\\"')       # Escapa las comillas dobles
+            .replace('\n', '\\n')      # Escapa los saltos de línea
+            .replace('\r', '')         # Elimina los retornos de carro para evitar errores
+            .replace('{', '\\{')       # Escapa llaves abiertas
+            .replace('}', '\\}'))      # Escapa llaves cerradas
+
+def visualize_automaton(automaton, token_name, all_graphs):
+    dot = graphviz.Digraph(name=f"digraph_afd_{token_name}", format='plain')
     seen = set()
     state_names = {}
-
-    def escape_label(text):
-        # Escapar los caracteres especiales para Graphviz
-        return (text.replace('\\', '\\\\')  # Escapa el backslash
-                .replace('"', '\\"')    # Escapa las comillas dobles
-                .replace('\n', '\\n')   # Escapa los saltos de línea
-                .replace('^', '\\^'))   # Escapa el caret
 
     def visualize(state):
         if state in seen:
@@ -75,25 +77,22 @@ def visualize_automaton(automaton, filename='Automaton'):
                 dot.edge(state_name, state_names[s], label=label)
 
     visualize(automaton.start_state)
-    output_path = f'{filename}.gv'
-    dot.render(output_path, view=True)
-    #print(f"Automaton visualized in: {output_path}.png")
+    all_graphs.append(dot.source)  # Append the source code of the graph to all_graphs
 
-def process_yalex_file(input_path):
+def process_yalex_file(input_path, output_path):
+    all_graphs = []
     with open(input_path, 'r') as file:
         for line in file:
             if ':=' in line:
                 token_name, regex = line.split(':=')
-                regex = regex.strip()
-                afn = regex_to_afn(regex)
+                afn = regex_to_afn(regex.strip())
                 if afn:
                     afd = afn_to_afd(afn)
-                    visualize_automaton(afd, f'Subconjuntos_AFD_{token_name}')
+                    visualize_automaton(afd, token_name, all_graphs)
                 else:
                     print(f"Error al generar el AFN para el token: {token_name}")
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write("\n".join(all_graphs))  # Write all graphs to a single file
 
-def main():
-    process_yalex_file('output_postfix.yalex')
-
-if __name__ == '__main__':
-    main()
+def main(input_path, output_path):
+    process_yalex_file(input_path, output_path)
