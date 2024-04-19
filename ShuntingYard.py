@@ -50,3 +50,5 @@ def process_yalex_file(input_path, output_path):
         file.write('\n'.join(postfix_expressions)) 
 
 process_yalex_file('easy.yalex', 'output_postfix.yalex')
+#process_yalex_file('medium.yalex', 'output_postfix.yalex')
+#process_yalex_file('hard.yalex', 'output_postfix.yalex')
