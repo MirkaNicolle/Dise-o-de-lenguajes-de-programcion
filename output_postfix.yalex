@@ -1,4 +1,4 @@
-EMAIL := [a-zA-Z0-9_.][a-zA-Z0-9_]+\.[a-zA-Z]++
-FECHA := \d2\d2\d4
-NUMERO_HEXADECIMAL := 0x[a-fA-F0-9]+
-OPERADOR_LOGICO := \\|||
+FLOAT := [+-][0-9][.]*?[0-9]?+
+COMENTARIO_MULTILINEA := \.\n|*?\**
+STRING := \\.[^"\\]|*
+FUNCION_MATHEMATICA := sincos|tan|exp|sqrt\[^\)]\*|
