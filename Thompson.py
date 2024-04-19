@@ -15,42 +15,33 @@ class State:
 
 class AFN:
     def __init__(self, start_state):
-        self.start_state = start_state  # Estado inicial del AFN
-        self.states = [start_state]     # Lista de estados que comienza con el estado inicial
-
-    def add_state(self, state):
-        if state not in self.states:
-            self.states.append(state)   # Añade un nuevo estado a la lista de estados si aún no está presente
-
-    def add_transition(self, from_state, to_state, symbol):
-        # Asegúrate de que tanto from_state como to_state estén en self.states
-        if from_state in self.states and to_state in self.states:
-            from_state.add_transition(symbol, to_state)  # Añade la transición usando el método definido en la clase State
+        self.start_state = start_state
+        self.states = [start_state]
 
 def regex_to_afn(postfix_regex):
     stack = []
     i = 0
     while i < len(postfix_regex):
         char = postfix_regex[i]
-        if char.isalnum():  # Manejo simple de caracteres alfanuméricos
+        if char.isalnum():
             start = State()
             end = State(True)
             start.add_transition(char, end)
             stack.append((start, end))
-        elif char == '[':  # Inicio de una clase de caracteres
+        elif char == '[':
             start = State()
             end = State(True)
             i += 1
             char_class = []
             while postfix_regex[i] != ']':
-                if postfix_regex[i] == '\\':  # Escape dentro de la clase
+                if postfix_regex[i] == '\\':
                     i += 1
                 char_class.append(postfix_regex[i])
                 i += 1
             start.add_transition("".join(char_class), end)
             stack.append((start, end))
-            i += 1  # Moverse más allá del ']' para continuar procesamiento
-        elif char in ['*', '+']:  # Operadores de repetición
+            i += 1
+        elif char in ['*', '+']:
             afn = stack.pop()
             start = State()
             end = State(True)
@@ -67,8 +58,8 @@ def regex_to_afn(postfix_regex):
         return AFN(afn[0])
     return None
 
-def visualize_afn(afn, token_name):
-    dot = graphviz.Digraph(format='png')
+def visualize_afn(afn, token_name, all_graphs):
+    dot = graphviz.Digraph(name=f"digraph_afn_{token_name}")
     seen = set()
     state_names = {}
 
@@ -93,21 +84,21 @@ def visualize_afn(afn, token_name):
                 dot.edge(state_name, state_names[s], label=label)
 
     visualize(afn.start_state)
-    dot.render(f'Thompson_AFN_{token_name}', view=True)
+    all_graphs.append(dot.source)
 
-def process_yalex_file(input_path):
-    with open(input_path, 'r') as file:
+def process_yalex_file(input_path, output_path):
+    all_graphs = []
+    with open(input_path, 'r', encoding='utf-8') as file:  # Asegúrate de que la lectura también maneje UTF-8 si es necesario
         for line in file:
             if ':=' in line:
                 token_name, regex = line.split(':=')
                 afn = regex_to_afn(regex.strip())
                 if afn:
-                    visualize_afn(afn, token_name)
+                    visualize_afn(afn, token_name, all_graphs)
                 else:
                     print(f"Error al generar el AFN para el token: {token_name}")
+    with open(output_path, 'w', encoding='utf-8') as f:  # Especifica la codificación UTF-8 al guardar
+        f.write("\n".join(all_graphs))
 
-def main():
-    process_yalex_file('output_postfix.yalex')
-
-if __name__ == '__main__':
-    main()
+def main(input_path, output_path):
+    process_yalex_file(input_path, output_path)
