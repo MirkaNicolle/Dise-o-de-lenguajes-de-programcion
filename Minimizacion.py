@@ -17,11 +17,16 @@ def remove_unreachable_states(afd):
 
 def minimize_afd(afd):
     remove_unreachable_states(afd)
-    P = {frozenset([s for s in afd.states if s.accept]), frozenset([s for s in afd.states if not s.accept])}
-    B = set(P)
+    print(f"States after removing unreachable: {[id(state) for state in afd.states]}")  # Depuración
 
+    P = {frozenset([s for s in afd.states if s.accept]), frozenset([s for s in afd.states if not s.accept])}
+    print(f"Initial partition: {P}")  # Depuración
+
+    B = set(P)
     while B:
         A = B.pop()
+        print(f"Processing partition: {A}")  # Depuración
+
         for symbol in set(sym for state in A for sym in state.transitions):
             C = set(s for s in A if symbol in s.transitions and set(s.transitions[symbol]) & A)
             for D in P.copy():
@@ -37,8 +42,11 @@ def minimize_afd(afd):
                         B.add(frozenset(difference))
                     else:
                         B.add(frozenset(intersect) if len(intersect) <= len(difference) else frozenset(difference))
+                print(f"Updated partitions: {P}")  # Depuración
 
     new_states = {frozenset(group): State(any(s.accept for s in group)) for group in P}
+    print(f"New states created: {new_states}")  # Depuración
+
     start_state = next(new_states[frozenset(group)] for group in P if afd.start_state in group)
     for group, new_state in new_states.items():
         for symbol in set(sym for state in group for sym in state.transitions):
@@ -50,6 +58,7 @@ def minimize_afd(afd):
                         target_set.add(new_states[frozenset(target_group)])
             for target in target_set:
                 new_state.add_transition(symbol, target)
+    print(f"Final minimized AFD: {[(id(state), state.transitions) for state in afd.states]}")  # Depuración
 
     return AFN(start_state)
 
