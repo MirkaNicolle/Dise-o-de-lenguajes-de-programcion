@@ -1,0 +1,2 @@
+NUMERO := [0-9]
+IDENTIFICADOR := [a-zA-Z_]
