@@ -32,11 +32,15 @@ def regex_to_afn(postfix_regex):
     i = 0
     while i < len(postfix_regex):
         char = postfix_regex[i]
+        print(f"Processing character: {char}")  # Depuración: mostrar el carácter actual
+
         if char.isalnum():  # Manejo simple de caracteres alfanuméricos
             start = State()
             end = State(True)
             start.add_transition(char, end)
             stack.append((start, end))
+            print(f"Added basic transition for {char}")  # Depuración: mostrar transición básica
+
         elif char == '[':  # Inicio de una clase de caracteres
             start = State()
             end = State(True)
@@ -49,7 +53,9 @@ def regex_to_afn(postfix_regex):
                 i += 1
             start.add_transition("".join(char_class), end)
             stack.append((start, end))
-            i += 1  # Moverse más allá del ']' para continuar procesamiento
+            print(f"Added class transition: {''.join(char_class)}")  # Depuración: mostrar transición de clase
+            i += 1
+
         elif char in ['*', '+']:  # Operadores de repetición
             afn = stack.pop()
             start = State()
@@ -60,12 +66,15 @@ def regex_to_afn(postfix_regex):
                 start.add_transition(None, end)
             afn[1].add_transition(None, afn[0])
             stack.append((start, end))
+            print(f"Added repetition {char}")  # Depuración: mostrar operador de repetición
+
         i += 1
 
     if stack:
-        afn = stack.pop()
-        return AFN(afn[0])
-    return None
+        afn_tuple = stack.pop()
+        afn = AFN(afn_tuple[0])  # afn_tuple[0] es el estado inicial del AFN
+        print(f"Final AFN created with start state {id(afn.start_state)}")  # Usar afn.start_state correctamente
+        return afn
 
 def visualize_afn(afn, token_name):
     dot = graphviz.Digraph(format='png')
