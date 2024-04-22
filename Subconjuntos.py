@@ -27,15 +27,19 @@ def move(states, symbol):
 
 def afn_to_afd(afn):
     initial_closure = epsilon_closure([afn.start_state])
+    print(f"Initial epsilon closure: {initial_closure}")  # Depuración
     unmarked = [initial_closure]
     afd_states = {frozenset(initial_closure): State(any(s.accept for s in initial_closure))}
-    afd = AFN(afd_states[frozenset(initial_closure)])  # Crea el AFD con el estado inicial
+    afd = AFN(afd_states[frozenset(initial_closure)])
+    print(f"Initial AFD state: {afd_states}")  # Depuración
 
     while unmarked:
         current = unmarked.pop()
+        print(f"Processing: {current}")  # Depuración
         current_state = afd_states[frozenset(current)]
         for symbol in set(sym for state in current for sym in state.transitions if sym is not None):
             move_closure = epsilon_closure(move(current, symbol))
+            print(f"Move closure for symbol {symbol}: {move_closure}")  # Depuración
             frozenset_closure = frozenset(move_closure)
             if frozenset_closure not in afd_states:
                 afd_states[frozenset_closure] = State(any(s.accept for s in move_closure))
@@ -43,6 +47,7 @@ def afn_to_afd(afn):
                 afd.states.append(afd_states[frozenset_closure])
             target_state = afd_states[frozenset_closure]
             current_state.add_transition(symbol, target_state)
+            print(f"Transition added: {current_state} --{symbol}--> {target_state}")  # Depuración
     return afd
 
 def visualize_automaton(automaton, filename='Automaton'):
