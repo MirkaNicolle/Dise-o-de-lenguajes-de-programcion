@@ -3,67 +3,55 @@ class LexicalAnalyzer:
     def __init__(self):
         self.afds = {}
         self.state_dicts = {}
-        self.afds["NUMERO"] = 2471446831248
-        self.state_dicts["NUMERO"] = {2471446831248: {'accept': False, 'transitions': {'0-9': [2471446830928]}}}
-        self.afds["IDENTIFICADOR"] = 2471446832016
-        self.state_dicts["IDENTIFICADOR"] = {2471446832016: {'accept': False, 'transitions': {'a-zA-Z_': [2471446832208]}}}
+        self.token_functions = {
+            'number': self.handle_number,
+            'identifier': self.handle_identifier,
+            'whitespace': self.handle_whitespace,
+            'operator': self.handle_operator
+        }
+    
+    def handle_number(self, text):
+        num = ''
+        i = 0
+        while i < len(text) and text[i].isdigit():
+            num += text[i]
+            i += 1
+        return int(num)
 
-    def is_in_range(self, char, range_spec):
-        if '-' in range_spec:
-            # Reemplaza los corchetes para no interferir con la lógica del rango
-            range_spec = range_spec.replace('[', '').replace(']', '')
-            # Itera sobre cada sub-rango separado por un guión
-            ranges = range_spec.split('-')
-            last_char = ''
-            for i, part in enumerate(ranges):
-                if i == 0:  # Primer elemento
-                    last_char = part
-                else:
-                    # Si es el último elemento o el siguiente comienza con un rango nuevo
-                    if i == len(ranges) - 1 or ranges[i + 1][0].isalpha():
-                        start, end = last_char, part
-                        if start <= char <= end:
-                            return True
-                        last_char = part
-                    else:
-                        # Maneja un carácter independiente que termina con guión
-                        if part == '':
-                            if last_char == char:
-                                return True
-                        last_char = part
-        else:
-            return char in range_spec
-        return False
+    def handle_identifier(self, text):
+        ident = ''
+        i = 0
+        while i < len(text) and (text[i].isalpha() or text[i] == '_'):
+            ident += text[i]
+            i += 1
+        return ident.upper()
+
+    def handle_whitespace(self, text):
+        return None  # Ignore whitespaces
+
+    def handle_operator(self, char):
+        return char
 
     def analyze(self, text):
         results = {}
-        print(f"Analyzing text: '{text}'")  # Muestra el texto que se está analizando
-        for token, start_state_id in self.afds.items():
-            for i in range(len(text)):
-                state = start_state_id
-                print(f"Starting new token search for '{token}' from position {i}")  # Indica la búsqueda de un nuevo token
-                for j in range(i, len(text)):
-                    char = text[j]
-                    transitions = self.state_dicts[token][state]["transitions"]
-                    next_state = None
-                    print(f"  At state {state}, processing char '{char}'")  # Muestra el carácter actual y el estado
-                    for range_spec, states in transitions.items():
-                        if self.is_in_range(char, range_spec):
-                            next_state = states[0]
-                            print(f"    Found valid transition for '{char}' in range '{range_spec}'; moving to state {next_state}")  # Muestra transición válida
-                            break
-                    if next_state is None:
-                        print(f"    No valid transition found for '{char}'; stopping search from position {i}")  # No se encontraron transiciones válidas
-                        break
-                    state = next_state
-                    if self.state_dicts[token][state]["accept"]:
-                        matched_text = text[i:j+1]
-                        print(f"    Token '{token}' recognized: '{matched_text}' at position {i}-{j}")  # Muestra reconocimiento de token
+        current_tokens = {token: [] for token in self.afds}  # Acumular texto para cada token
+
+        # Recorrer cada carï¿½cter del texto
+        for index, char in enumerate(text):
+            for token, state in list(current_tokens.items()):
+                transitions = self.state_dicts[token][state]['transitions']
+                if char in transitions:
+                    next_state = transitions[char][0]
+                    current_tokens[token].append(char)  # Acumular caracteres para este token
+                    if self.state_dicts[token][next_state]['accept']:
+                        # Si alcanza un estado de aceptaciï¿½n, guarda el token
+                        token_text = ''.join(current_tokens[token])
                         if token not in results:
                             results[token] = []
-                        results[token].append(matched_text)
-                        break
-        return results
+                        results[token].append(token_text)
+                        current_tokens[token] = []  # Reiniciar acumulador para este token
+                else:
+                    # Reiniciar si no hay transiciï¿½n vï¿½lida
+                    current_tokens[token] = []
 
-analyzer = LexicalAnalyzer()
-print(analyzer.analyze("abc"))
+        return results
