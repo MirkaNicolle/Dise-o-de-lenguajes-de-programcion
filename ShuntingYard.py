@@ -49,4 +49,4 @@ def process_yalex_file(input_path, output_path):
     with open(output_path, 'w') as file: 
         file.write('\n'.join(postfix_expressions)) 
 
-process_yalex_file('easy.yalex', 'output_postfix.yalex')
+#process_yalex_file('easy.yalex', 'output_postfix.yalex')
