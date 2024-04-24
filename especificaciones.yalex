@@ -1,0 +1,42 @@
+{
+def handle_number(lexbuf):
+    return int(lexbuf)
+
+def handle_identifier(lexbuf):
+    return lexbuf.upper()
+
+def handle_whitespace(lexbuf):
+    return None  # Simply ignore whitespaces
+
+def handle_string(lexbuf):
+    return lexbuf.strip('"')  # Remove quotes and return the string
+
+def handle_multiline_comment(lexbuf):
+    return None  # Ignore multiline comments
+
+def handle_eof():
+    raise Exception("End of Input")
+
+}
+
+let digit = [0-9]
+let alpha = [a-zA-Z_]
+let whitespace = [\s\t]
+let string = "\"(\\\\.|[^\"\\\\])*\""  # Matches double quoted strings handling escaped quotes
+let multiline_comment = "/\*((.|\n)*?)\*/"  # Matches multiline comments
+
+rule get_token =
+    {digit}+             { handle_number(lexbuf) }            (* Example: Easy - Matches integers *)
+  | {alpha}+             { handle_identifier(lexbuf) }        (* Example: Medium - Matches identifiers *)
+  | {whitespace}+        { handle_whitespace(lexbuf) }        (* Example: Easy - Ignores whitespace *)
+  | [+-*/()]             { return lexbuf }                    (* Example: Medium - Matches operators and parentheses *)
+  | {digit}+\.{digit}+   { return float(lexbuf) }             (* Example: Difficult - Matches floating-point numbers *)
+  | {string}             { handle_string(lexbuf) }            (* Example: Difficult - Matches double quoted strings *)
+  | {multiline_comment}  { handle_multiline_comment(lexbuf) } (* Example: Difficult - Ignores multiline comments *)
+  | eof                  { handle_eof() }                     (* Handle end of file or input *)
+
+{ 
+
+print("Lexer parsing completed.")
+
+}
