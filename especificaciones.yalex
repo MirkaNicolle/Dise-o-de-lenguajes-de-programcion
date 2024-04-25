@@ -26,13 +26,13 @@ let string = "\"(\\\\.|[^\"\\\\])*\""  # Matches double quoted strings handling 
 let multiline_comment = "/\*((.|\n)*?)\*/"  # Matches multiline comments
 
 rule get_token =
-    {digit}+             { handle_number(lexbuf) }            (* Example: Easy - Matches integers *)
-  | {alpha}+             { handle_identifier(lexbuf) }        (* Example: Medium - Matches identifiers *)
-  | {whitespace}+        { handle_whitespace(lexbuf) }        (* Example: Easy - Ignores whitespace *)
-  | [+-*/()]             { return lexbuf }                    (* Example: Medium - Matches operators and parentheses *)
-  | {digit}+\.{digit}+   { return float(lexbuf) }             (* Example: Difficult - Matches floating-point numbers *)
-  | {string}             { handle_string(lexbuf) }            (* Example: Difficult - Matches double quoted strings *)
-  | {multiline_comment}  { handle_multiline_comment(lexbuf) } (* Example: Difficult - Ignores multiline comments *)
+    {digit}+             { handle_number(lexbuf) }            (* Easy: - Matches integers *)
+  | {whitespace}+        { handle_whitespace(lexbuf) }        (* Easy: - Ignores whitespace *)
+  | {alpha}+             { handle_identifier(lexbuf) }        (* Medium: - Matches identifiers *)
+  | [+-*/()]             { return lexbuf }                    (* Medium: - Matches operators and parentheses *)
+  | {digit}+\.{digit}+   { return float(lexbuf) }             (* Difficult: - Matches floating-point numbers *)
+  | {string}             { handle_string(lexbuf) }            (* Difficult: - Matches double quoted strings *)
+  | {multiline_comment}  { handle_multiline_comment(lexbuf) } (* Difficult: - Ignores multiline comments *)
   | eof                  { handle_eof() }                     (* Handle end of file or input *)
 
 { 
