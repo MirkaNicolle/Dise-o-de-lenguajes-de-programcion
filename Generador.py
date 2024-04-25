@@ -40,21 +40,30 @@ class LexicalAnalyzer:
 
     def analyze(self, text):
         results = []
+        errors = []
         i = 0
         while i < len(text):
-            if text[i].isdigit():
-                num, i = self.handle_number(text, i)
-                results.append((num, "Number"))
-            elif text[i].isalpha() or text[i] == '_':
-                ident, i = self.handle_identifier(text, i)
-                results.append((ident, "Identifier"))
-            elif text[i].isspace():
-                i = self.handle_whitespace(text, i)
-            elif text[i] in "+-*/()":
-                op, i = self.handle_operator(text, i)
-                results.append((op, "Operator"))
-            else:
-                raise ValueError(f"Unknown character: {text[i]}")
+            try:
+                if text[i].isdigit():
+                    num, i = self.handle_number(text, i)
+                    results.append((num, "Number"))
+                elif text[i].isalpha() or text[i] == '_':
+                    ident, i = self.handle_identifier(text, i)
+                    results.append((ident, "Identifier"))
+                elif text[i].isspace():
+                    i = self.handle_whitespace(text, i)
+                elif text[i] in "+-*/()":
+                    op, i = self.handle_operator(text, i)
+                    results.append((op, "Operator"))
+                else:
+                    raise ValueError(f"Unknown character: {text[i]} at position {i}")
+            except ValueError as e:
+                errors.append(str(e))
+                i += 1  # Move past the unknown character
+
+        if errors:
+            error_message = "Errors found: " + " ".join(errors)
+            results.append((error_message, "Error"))
         return results
 
     def handle_number(self, text, i):
