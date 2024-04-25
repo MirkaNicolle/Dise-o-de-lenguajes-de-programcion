@@ -1,0 +1,3 @@
+variable1 = 123 * (inputValue / 12)
+// Comentario simple que debería ser ignorado
+alpha123 = beta456 + gamma789
