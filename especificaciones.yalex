@@ -22,6 +22,7 @@ def handle_eof():
 let digit = [0-9]
 let alpha = [a-zA-Z_]
 let whitespace = [\s\t]
+let operator = [+=\-*/><();,.{}]
 let string = "\"(\\\\.|[^\"\\\\])*\""  # Matches double quoted strings handling escaped quotes
 let multiline_comment = "/\*((.|\n)*?)\*/"  # Matches multiline comments
 
