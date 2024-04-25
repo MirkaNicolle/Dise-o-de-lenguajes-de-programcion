@@ -1,5 +1,6 @@
 '''Laboratorio D'''
 
+# -*- coding: utf-8 -*-
 from ShuntingYard import to_postfix
 from Thompson import regex_to_afn
 from Subconjuntos import afn_to_afd
@@ -7,11 +8,11 @@ from Minimizacion import minimize_afd
 
 def read_yalex_file(file_path):
     tokens = {}
-    with open(file_path, 'r') as file:
-        '''for line in file:
+    with open(file_path, 'r', encoding='utf-8') as file:
+        for line in file:
             if ':=' in line:
                 token_name, regex = line.split(':=')
-                tokens[token_name.strip()] = regex.strip()'''
+                tokens[token_name.strip()] = regex.strip()
     return tokens
 
 def process_regex_to_afd(regex):
@@ -33,34 +34,39 @@ def afd_to_dict(afd):
 
 def generate_lexical_analyzer_code(tokens, output_file):
     code = '''
+# -*- coding: utf-8 -*-
 class LexicalAnalyzer:
     def __init__(self, afds=None, state_dicts=None):
-        self.afds = afds or {}
-        self.state_dicts = state_dicts or {}
+        if afds is None:
+            afds = {}
+        if state_dicts is None:
+            state_dicts = {}
+        self.afds = afds
+        self.state_dicts = state_dicts
 
     def analyze(self, text):
         results = []
         errors = []
         i = 0
         while i < len(text):
-            try:
-                if text[i].isdigit():
-                    num, i = self.handle_number(text, i)
-                    results.append((num, "Number"))
-                elif text[i].isalpha() or text[i] == '_':
-                    ident, i = self.handle_identifier(text, i)
-                    results.append((ident, "Identifier"))
-                elif text[i].isspace():
-                    i = self.handle_whitespace(text, i)
-                elif text[i] in "+-*/()":
-                    op, i = self.handle_operator(text, i)
-                    results.append((op, "Operator"))
-                else:
-                    raise ValueError(f"Unknown character: {text[i]} at position {i}")
-            except ValueError as e:
-                errors.append(str(e))
+            if text[i].isdigit():
+                num, i = self.handle_number(text, i)
+                results.append((num, "Number"))
+            elif text[i].isalpha() or text[i] == '_':
+                ident, i = self.handle_identifier(text, i)
+                results.append((ident, "Identifier"))
+            elif text[i].isspace():
+                i = self.handle_whitespace(text, i)
+            elif text[i] in "+-*/()=.,;:{}[]<>!&|%^'@":
+                op, i = self.handle_operator(text, i)
+                results.append((op, "Operator"))
+            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '/':
+                i = self.handle_single_line_comment(text, i + 2)
+            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '*':
+                i = self.handle_multi_line_comment(text, i + 2)
+            else:
+                errors.append(f"Unknown character: {text[i]} at position {i}")
                 i += 1  # Move past the unknown character
-
         if errors:
             error_message = "Errors found: " + " ".join(errors)
             results.append((error_message, "Error"))
@@ -87,13 +93,18 @@ class LexicalAnalyzer:
 
     def handle_operator(self, text, i):
         return text[i], i + 1
+
+    def handle_single_line_comment(self, text, i):
+        while i < len(text) and text[i] != ' ':
+            i += 1
+        return i
+
+    def handle_multi_line_comment(self, text, i):
+        while i < len(text):
+            if i < len(text) - 1 and text[i] == '*' and text[i+1] == '/':
+                return i + 2
+            i += 1
+        return i  # Handle case where comment is not closed
 '''
-    with open(output_file, 'w') as file:
+    with open(output_file, 'w', encoding='utf-8') as file:
         file.write(code)
-
-'''def main():
-    tokens = read_yalex_file('especificaciones.yalex')
-    generate_lexical_analyzer_code(tokens, 'lexical_analyzer.py')
-
-if __name__ == '__main__':
-    main()'''
