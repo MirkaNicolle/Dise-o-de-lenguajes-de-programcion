@@ -1,0 +1,8 @@
+floatValue = 123.456
+if (x >= 99.9) {
+    // Comienza un bloque
+    y = sin(x) * 10.5; /* Comentario multi-línea
+    que continúa en la siguiente línea */
+    z = "String with spaces and numbers 12345";
+}
+_identificador_con_subrayado = otroIdentificador + unTercero - 987.654
