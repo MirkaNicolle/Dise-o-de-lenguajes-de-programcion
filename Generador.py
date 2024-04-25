@@ -32,84 +32,59 @@ def afd_to_dict(afd):
     return start_state_id, state_dict
 
 def generate_lexical_analyzer_code(tokens, output_file):
-    """
-    Genera el código fuente del analizador léxico a partir de los AFDs minimizados.
-    Incluye todo el código necesario para que funcione de manera independiente.
-    """
-    with open(output_file, 'w') as file:
-        file.write('# -*- coding: utf-8 -*-\n')
-        file.write('class LexicalAnalyzer:\n')
-        file.write('    def __init__(self):\n')
-        file.write('        self.afds = {}\n')
-        file.write('        self.state_dicts = {}\n')
-        
-        # Asegurarse de que todas las funciones de manejo de tokens están definidas aquí.
-        file.write('''
+    code = '''
+class LexicalAnalyzer:
+    def __init__(self, afds=None, state_dicts=None):
+        self.afds = afds or {}
+        self.state_dicts = state_dicts or {}
 
-    self.token_functions = {
-            'number': self.handle_number,
-            'identifier': self.handle_identifier,
-            'whitespace': self.handle_whitespace,
-            'operator': self.handle_operator
-        }
-    
-    def handle_number(self, text):
-        num = ''
+    def analyze(self, text):
+        results = []
         i = 0
+        while i < len(text):
+            if text[i].isdigit():
+                num, i = self.handle_number(text, i)
+                results.append((num, "Number"))
+            elif text[i].isalpha() or text[i] == '_':
+                ident, i = self.handle_identifier(text, i)
+                results.append((ident, "Identifier"))
+            elif text[i].isspace():
+                i = self.handle_whitespace(text, i)
+            elif text[i] in "+-*/()":
+                op, i = self.handle_operator(text, i)
+                results.append((op, "Operator"))
+            else:
+                raise ValueError(f"Unknown character: {text[i]}")
+        return results
+
+    def handle_number(self, text, i):
+        num = ""
         while i < len(text) and text[i].isdigit():
             num += text[i]
             i += 1
-        return int(num)
+        return int(num), i
 
-    def handle_identifier(self, text):
-        ident = ''
-        i = 0
+    def handle_identifier(self, text, i):
+        ident = ""
         while i < len(text) and (text[i].isalpha() or text[i] == '_'):
             ident += text[i]
             i += 1
-        return ident.upper()
+        return ident.upper(), i
 
-    def handle_whitespace(self, text):
-        return None  # Ignore whitespaces
+    def handle_whitespace(self, text, i):
+        while i < len(text) and text[i].isspace():
+            i += 1
+        return i
 
-    def handle_operator(self, char):
-        return char
-''')
-        for token, regex in tokens.items():
-            afd = process_regex_to_afd(regex)
-            start_state_id, state_dict = afd_to_dict(afd)
-            file.write(f'        self.afds["{token}"] = {start_state_id}\n')
-            file.write(f'        self.state_dicts["{token}"] = {state_dict}\n')
-        
-        file.write('''
-    def analyze(self, text):
-        results = {}
-        current_tokens = {token: [] for token in self.afds}  # Acumular texto para cada token
+    def handle_operator(self, text, i):
+        return text[i], i + 1
+'''
+    with open(output_file, 'w') as file:
+        file.write(code)
 
-        # Recorrer cada carácter del texto
-        for index, char in enumerate(text):
-            for token, state in list(current_tokens.items()):
-                transitions = self.state_dicts[token][state]['transitions']
-                if char in transitions:
-                    next_state = transitions[char][0]
-                    current_tokens[token].append(char)  # Acumular caracteres para este token
-                    if self.state_dicts[token][next_state]['accept']:
-                        # Si alcanza un estado de aceptación, guarda el token
-                        token_text = ''.join(current_tokens[token])
-                        if token not in results:
-                            results[token] = []
-                        results[token].append(token_text)
-                        current_tokens[token] = []  # Reiniciar acumulador para este token
-                else:
-                    # Reiniciar si no hay transición válida
-                    current_tokens[token] = []
-
-        return results
-''')
-
-def main():
+'''def main():
     tokens = read_yalex_file('especificaciones.yalex')
     generate_lexical_analyzer_code(tokens, 'lexical_analyzer.py')
 
 if __name__ == '__main__':
-    main()
+    main()'''
