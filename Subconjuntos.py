@@ -7,60 +7,54 @@ import graphviz
 
 '''manejo de epsilon'''
 def epsilon_closure(states):
-    stack = list(states)
-    closure = set(states)
-    while stack:
-        state = stack.pop()
-        if None in state.transitions:
-            for next_state in state.transitions[None]:
-                if next_state not in closure:
-                    closure.add(next_state)
-                    stack.append(next_state)
+    stack = list(states)  #inicializar una pila con los estados
+    closure = set(states)  #inicializar la cerradura con los mismos estados
+    while stack:  #mientras haya estados en la pila
+        state = stack.pop()  #sacar un estado de la pila
+        if None in state.transitions:  #si hay transiciones epsilon en el estado
+            for next_state in state.transitions[None]:  #iterar sobre los estados de transicion
+                if next_state not in closure:  #si el estado no esta en la cerradura
+                    closure.add(next_state)  #agregarlo a la cerradura
+                    stack.append(next_state)  #agregarlo en la pila para explorar sus transiciones epsilon
     return closure
 
 def move(states, symbol):
-    next_states = set()
-    for state in states:
-        if symbol in state.transitions:
-            next_states.update(state.transitions[symbol])
+    next_states = set()  #conjunto para los estados siguientes
+    for state in states:  #para cada estado en el conjunto
+        if symbol in state.transitions:  #si el simbolo esta en las transiciones del estado
+            next_states.update(state.transitions[symbol])  #agregar los estados de transicion al conjunto de estados siguientes
     return next_states
 
 def afn_to_afd(afn):
-    initial_closure = epsilon_closure([afn.start_state])
-    print(f"Initial epsilon closure: {initial_closure}")  # Depuración
-    unmarked = [initial_closure]
-    afd_states = {frozenset(initial_closure): State(any(s.accept for s in initial_closure))}
-    afd = AFN(afd_states[frozenset(initial_closure)])
-    print(f"Initial AFD state: {afd_states}")  # Depuración
+    initial_closure = epsilon_closure([afn.start_state])  #obtener la cerradura epsilon del estado inicial
+    unmarked = [initial_closure]  #inicializa la lista de conjuntos de estados no marcados
+    afd_states = {frozenset(initial_closure): State(any(s.accept for s in initial_closure))}  #crear los estados del AFD
+    afd = AFN(afd_states[frozenset(initial_closure)])  #inicializa el AFD con el estado inicial
 
-    while unmarked:
-        current = unmarked.pop()
-        print(f"Processing: {current}")  # Depuración
-        current_state = afd_states[frozenset(current)]
-        for symbol in set(sym for state in current for sym in state.transitions if sym is not None):
-            move_closure = epsilon_closure(move(current, symbol))
-            print(f"Move closure for symbol {symbol}: {move_closure}")  # Depuración
-            frozenset_closure = frozenset(move_closure)
-            if frozenset_closure not in afd_states:
-                afd_states[frozenset_closure] = State(any(s.accept for s in move_closure))
-                unmarked.append(move_closure)
-                afd.states.append(afd_states[frozenset_closure])
-            target_state = afd_states[frozenset_closure]
-            current_state.add_transition(symbol, target_state)
-            print(f"Transition added: {current_state} --{symbol}--> {target_state}")  # Depuración
+    while unmarked:  #mientras haya conjuntos de estados no marcados
+        current = unmarked.pop()  #sacar un conjunto de estados no marcado
+        current_state = afd_states[frozenset(current)]  #obtener el estado del AFD correspondiente
+        for symbol in set(sym for state in current for sym in state.transitions if sym is not None):  #para cada simbolo en las transiciones de los estados del conjunto
+            move_closure = epsilon_closure(move(current, symbol))  #obtener la cerradura epsilon de los estados alcanzables por el simbolo
+            frozenset_closure = frozenset(move_closure)  #crear un frozenset de la cerradura para usar como clave
+            if frozenset_closure not in afd_states:  #si la cerradura no esta en los estados del AFD
+                afd_states[frozenset_closure] = State(any(s.accept for s in move_closure))  #crear un nuevo estado en el AFD
+                unmarked.append(move_closure)  #agregar la cerradura a los estados no marcados
+                afd.states.append(afd_states[frozenset_closure])  #agregar el nuevo estado a los estados del AFD
+            target_state = afd_states[frozenset_closure]  #obtener el estado destino del AFD
+            current_state.add_transition(symbol, target_state)  #agregar la transicion al estado actual del AFD
     return afd
 
 def visualize_automaton(automaton, filename='Automaton'):
     dot = graphviz.Digraph(format='png')
-    seen = set()
-    state_names = {}
+    seen = set()  #conjunto para rastrear los estados ya vistos
+    state_names = {}  #diccionario para asignar nombres a los estados
 
     def escape_label(text):
-        # Escapar los caracteres especiales para Graphviz
-        return (text.replace('\\', '\\\\')  # Escapa el backslash
-                .replace('"', '\\"')    # Escapa las comillas dobles
-                .replace('\n', '\\n')   # Escapa los saltos de línea
-                .replace('^', '\\^'))   # Escapa el caret
+        return (text.replace('\\', '\\\\')  #backslash
+                .replace('"', '\\"')    #comillas dobles
+                .replace('\n', '\\n')   #saltos de línea
+                .replace('^', '\\^'))   #caret
 
     def visualize(state):
         if state in seen:
@@ -82,23 +76,3 @@ def visualize_automaton(automaton, filename='Automaton'):
     visualize(automaton.start_state)
     output_path = f'{filename}.gv'
     dot.render(output_path, view=True)
-    #print(f"Automaton visualized in: {output_path}.png")
-
-def process_yalex_file(input_path):
-    with open(input_path, 'r') as file:
-        for line in file:
-            if ':=' in line:
-                token_name, regex = line.split(':=')
-                regex = regex.strip()
-                afn = regex_to_afn(regex)
-                if afn:
-                    afd = afn_to_afd(afn)
-                    visualize_automaton(afd, f'Subconjuntos_AFD_{token_name}')
-                else:
-                    print(f"Error al generar el AFN para el token: {token_name}")
-
-def main():
-    process_yalex_file('output_postfix.yalex')
-
-if __name__ == '__main__':
-    main()
