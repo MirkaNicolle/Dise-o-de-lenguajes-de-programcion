@@ -1,2 +1,2 @@
-variable1 = 123 * (inputValue / 12)
+variable1 = 123 * (inputValue / 12) @
 alpha123 = beta456 + gamma789
