@@ -9,38 +9,38 @@ from Minimizacion import minimize_afd
 def read_yalex_file(file_path):
     tokens = {}
     with open(file_path, 'r', encoding='utf-8') as file:
-        for line in file:
+        '''for line in file:
             if ':=' in line:
                 token_name, regex = line.split(':=')
-                tokens[token_name.strip()] = regex.strip()
-    return tokens
+                tokens[token_name.strip()] = regex.strip()  '''
+    return tokens 
 
 def process_regex_to_afd(regex):
-    postfix = to_postfix(regex)
-    afn = regex_to_afn(postfix)
-    afd = afn_to_afd(afn)
-    minimized_afd = minimize_afd(afd)
-    return minimized_afd
+    postfix = to_postfix(regex) #conversion de expresion regular en notacion postfix
+    afn = regex_to_afn(postfix) #generacion de AFN
+    afd = afn_to_afd(afn) # AFN A AFD
+    minimized_afd = minimize_afd(afd) #minimizacion de AFD
+    return minimized_afd 
 
 def afd_to_dict(afd):
     state_dict = {}
-    for state in afd.states:
+    for state in afd.states: #creacion de un diccionario para representar los estados y transiciones del AFD
         state_id = id(state)
         state_dict[state_id] = {'accept': state.accept, 'transitions': {}}
-        for symbol, states in state.transitions.items():
+        for symbol, states in state.transitions.items(): #almacena las transiciones por cada simbolo a los estados correspondientes
             state_dict[state_id]['transitions'][symbol] = [id(s) for s in states]
     start_state_id = id(afd.start_state)
-    return start_state_id, state_dict
+    return start_state_id, state_dict  # devuelve el id del estado inicial y el diccionario de estados
 
-def generate_lexical_analyzer_code(tokens, output_file):
+def generate_lexical_analyzer_code(tokens, output_file): #codigo fuente para analizador lexico
     code = '''
 # -*- coding: utf-8 -*-
 class LexicalAnalyzer:
     def __init__(self, afds=None, state_dicts=None):
         if afds is None:
-            afds = {}
+            afds = {}  #inicializa afds
         if state_dicts is None:
-            state_dicts = {}
+            state_dicts = {}  #inicializa state_dicts
         self.afds = afds
         self.state_dicts = state_dicts
 
@@ -49,24 +49,24 @@ class LexicalAnalyzer:
         errors = []
         i = 0
         while i < len(text):
-            if text[i].isdigit():
+            if text[i].isdigit():  #manejo de numeros
                 num, i = self.handle_number(text, i)
                 results.append((num, "Number"))
-            elif text[i].isalpha() or text[i] == '_':
+            elif text[i].isalpha() or text[i] == '_':  #menejo de identificadores
                 ident, i = self.handle_identifier(text, i)
                 results.append((ident, "Identifier"))
-            elif text[i].isspace():
+            elif text[i].isspace():  #manejo de espacios en blanco
                 i = self.handle_whitespace(text, i)
-            elif text[i] in "+-*/()=.,;:{}[]<>!&|%^'@":
+            elif text[i] in "+-*/()=.,;:{}[]<>!&|%^'@":  #manejo de operadores y puntuacion
                 op, i = self.handle_operator(text, i)
                 results.append((op, "Operator"))
-            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '/':
+            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '/':  #manejo de comentarios de una linea
                 i = self.handle_single_line_comment(text, i + 2)
-            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '*':
+            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '*':  #manejo de comentarios multilinea
                 i = self.handle_multi_line_comment(text, i + 2)
-            else:
+            else:  #manejo de caracteres desconocidos
                 errors.append(f"Unknown character: {text[i]} at position {i}")
-                i += 1  # Move past the unknown character
+                i += 1
         if errors:
             error_message = "Errors found: " + " ".join(errors)
             results.append((error_message, "Error"))
@@ -101,10 +101,10 @@ class LexicalAnalyzer:
 
     def handle_multi_line_comment(self, text, i):
         while i < len(text):
-            if i < len(text) - 1 and text[i] == '*' and text[i+1] == '/':
+            if text[i] == '*' and i+1 < len(text) and text[i+1] == '/':
                 return i + 2
             i += 1
-        return i  # Handle case where comment is not closed
+        return i  # caso donde el comentario multilinea no se cierra
 '''
     with open(output_file, 'w', encoding='utf-8') as file:
         file.write(code)
