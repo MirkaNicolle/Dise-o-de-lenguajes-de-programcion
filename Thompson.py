@@ -4,76 +4,74 @@ import graphviz
 
 class State:
     def __init__(self, accept=False):
-        self.accept = accept
-        self.transitions = {}
+        self.accept = accept  #estado acepta si es verdadero
+        self.transitions = {}  #diccionario de transiciones
 
     def add_transition(self, symbol, state):
         if symbol in self.transitions:
-            self.transitions[symbol].append(state)
+            self.transitions[symbol].append(state)  #agregar estado a la transicion existente
         else:
-            self.transitions[symbol] = [state]
+            self.transitions[symbol] = [state]  #crear nueva transicion para el simbolo
 
 class AFN:
     def __init__(self, start_state):
-        self.start_state = start_state  # Estado inicial del AFN
-        self.states = [start_state]     # Lista de estados que comienza con el estado inicial
+        self.start_state = start_state  #estado inicial del afn
+        self.states = [start_state]     #lista de estados comienza con el estado inicial
 
     def add_state(self, state):
         if state not in self.states:
-            self.states.append(state)   # Añade un nuevo estado a la lista de estados si aún no está presente
+            self.states.append(state)   #anadir nuevo estado si no esta presente
 
     def add_transition(self, from_state, to_state, symbol):
-        # Asegúrate de que tanto from_state como to_state estén en self.states
         if from_state in self.states and to_state in self.states:
-            from_state.add_transition(symbol, to_state)  # Añade la transición usando el método definido en la clase State
+            from_state.add_transition(symbol, to_state)  #anadir transicion entre estados
 
 def regex_to_afn(postfix_regex):
-    stack = []
-    i = 0
+    stack = []  #pila para construccion de afn
+    i = 0  #indice para iterar a traves del regex
     while i < len(postfix_regex):
-        char = postfix_regex[i]
-        print(f"Processing character: {char}")  # Depuración: mostrar el carácter actual
+        char = postfix_regex[i]  #caracter actual del regex
+        print(f"Processing character: {char}")  #imprime el caracter actual para depuracion
 
-        if char.isalnum():  # Manejo simple de caracteres alfanuméricos
-            start = State()
-            end = State(True)
-            start.add_transition(char, end)
-            stack.append((start, end))
-            print(f"Added basic transition for {char}")  # Depuración: mostrar transición básica
+        if char.isalnum():  #si el caracter es alfanumerico
+            start = State()  #crea un nuevo estado inicial sin aceptacion
+            end = State(True)  #crea un nuevo estado final con aceptacion
+            start.add_transition(char, end)  #agrega una transición desde el estado inicial al final usando el caracter actual
+            stack.append((start, end))  #añade la pareja de estados (inicio, fin) a la pila para gestionar el AFN
+            print(f"Added basic transition for {char}")  #imprime transicion basica agregada
 
-        elif char == '[':  # Inicio de una clase de caracteres
-            start = State()
-            end = State(True)
-            i += 1
-            char_class = []
-            while postfix_regex[i] != ']':
-                if postfix_regex[i] == '\\':  # Escape dentro de la clase
-                    i += 1
-                char_class.append(postfix_regex[i])
-                i += 1
-            start.add_transition("".join(char_class), end)
-            stack.append((start, end))
-            print(f"Added class transition: {''.join(char_class)}")  # Depuración: mostrar transición de clase
-            i += 1
+        elif char == '[':  #inicio de clase de caracteres
+            start = State()  #crea un nuevo estado inicial sin aceptacion
+            end = State(True)  #crea un nuevo estado final con aceptacion
+            i += 1  #avanza al siguiente caracter en la expresion
+            char_class = []  #lista para acumular caracteres de la clase
+            while postfix_regex[i] != ']':  #continua hasta el fin de la clase de caracteres
+                if postfix_regex[i] == '\\':  #maneja escape dentro de la clase
+                    i += 1  #salta el caracter para obtener el siguiente
+                char_class.append(postfix_regex[i])  #agrega el caracter a la lista de la clase
+                i += 1  #avanza al siguiente caracter
+            start.add_transition("".join(char_class), end)  #agrega una transicion con todos los caracteres de la clase
+            stack.append((start, end))  #apila el par de estados (inicio, fin)
+            print(f"Added class transition: {''.join(char_class)}")  #imprime transicion de clase agregada
+            i += 1  #avanza al siguiente caracter despues del cierre de la clase
 
-        elif char in ['*', '+']:  # Operadores de repetición
-            afn = stack.pop()
-            start = State()
-            end = State(True)
-            start.add_transition(None, afn[0])
-            afn[1].add_transition(None, end)
-            if char == '*':
-                start.add_transition(None, end)
-            afn[1].add_transition(None, afn[0])
-            stack.append((start, end))
-            print(f"Added repetition {char}")  # Depuración: mostrar operador de repetición
-
-        i += 1
+        elif char in ['*', '+']:  #operadores de clausura y positiva
+            afn = stack.pop()  #saca el ultimo par de estados de la pila
+            start = State()  #crea un nuevo estado inicial
+            end = State(True)  #crea un nuevo estado final
+            start.add_transition(None, afn[0])  #agrega transicion epsilon del nuevo inicio al inicio del afn extraido
+            afn[1].add_transition(None, end)  #agrega transicion epsilon del fin del afn extraido al nuevo fin
+            if char == '*':  #si es una clausura de kleene
+                start.add_transition(None, end)  #agrega transicion epsilon directa del inicio al fin
+            afn[1].add_transition(None, afn[0])  #agrega transicion epsilon del fin al inicio para repetir
+            stack.append((start, end))  #apila la nueva pareja de estados
+            print(f"Added repetition {char}")  #imprime operador de repeticion agregado
+        i += 1  #avanza al siguiente caracter
 
     if stack:
         afn_tuple = stack.pop()
-        afn = AFN(afn_tuple[0])  # afn_tuple[0] es el estado inicial del AFN
-        print(f"Final AFN created with start state {id(afn.start_state)}")  # Usar afn.start_state correctamente
+        afn = AFN(afn_tuple[0])  #crea afn con el estado inicial de la tupla
+        print(f"Final AFN created with start state {id(afn.start_state)}")  #imprime estado inicial del afn final
         return afn
 
 def visualize_afn(afn, token_name):
@@ -103,20 +101,3 @@ def visualize_afn(afn, token_name):
 
     visualize(afn.start_state)
     dot.render(f'Thompson_AFN_{token_name}', view=True)
-
-def process_yalex_file(input_path):
-    with open(input_path, 'r') as file:
-        for line in file:
-            if ':=' in line:
-                token_name, regex = line.split(':=')
-                afn = regex_to_afn(regex.strip())
-                if afn:
-                    visualize_afn(afn, token_name)
-                else:
-                    print(f"Error al generar el AFN para el token: {token_name}")
-
-def main():
-    process_yalex_file('output_postfix.yalex')
-
-if __name__ == '__main__':
-    main()
