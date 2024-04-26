@@ -1,4 +1,5 @@
 floatValue = 123.456
+@
 if (x >= 99.9) {
     // Comienza un bloque
     y = sin(x) * 10.5;
