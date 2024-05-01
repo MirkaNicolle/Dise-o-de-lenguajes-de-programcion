@@ -1,0 +1,42 @@
+{
+/* Definición de parser */
+
+/* INICIA sección de TOKENS */
+%token IDENTIFIER
+%token NUMBER
+%token PLUS
+%token MINUS
+%token MULT
+%token DIV
+%token LPAREN
+%token RPAREN
+IGNORE WS
+/* FINALIZA sección de TOKENS */
+
+%%
+
+/* INICIA sección de PRODUCCIONES */
+rule expression =
+    expression PLUS term             { return create_node('add', expression, term) }
+  | expression MINUS term            { return create_node('subtract', expression, term) }
+  | term                             { return term }
+;
+
+rule term =
+    term MULT factor                 { return create_node('multiply', term, factor) }
+  | term DIV factor                  { return create_node('divide', term, factor) }
+  | factor                           { return factor }
+;
+
+rule factor =
+    LPAREN expression RPAREN         { return expression }
+  | IDENTIFIER                       { return create_leaf('identifier', IDENTIFIER) }
+  | NUMBER                           { return create_leaf('number', NUMBER) }
+;
+/* FINALIZA sección de PRODUCCIONES */
+
+}
+
+{
+print("Parser generation completed.")
+}
