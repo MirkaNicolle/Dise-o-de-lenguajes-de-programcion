@@ -1,0 +1,29 @@
+{
+def handle_number(lexbuf):
+    return int(lexbuf)
+
+def handle_identifier(lexbuf):
+    return lexbuf.upper()
+
+def handle_whitespace(lexbuf):
+    return None  # Simply ignore whitespaces
+
+def handle_eof():
+    raise Exception("End of Input")
+}
+
+let digit = [0-9]
+let alpha = [a-zA-Z_]
+let whitespace = [\s\t]
+let operator = [+=\-*/><();,.{}]
+
+rule get_token =
+    {digit}+             { handle_number(lexbuf) }            (* Easy: - Matches integers *)
+  | {whitespace}+        { handle_whitespace(lexbuf) }        (* Easy: - Ignores whitespace *)
+  | {alpha}+             { handle_identifier(lexbuf) }        (* Medium: - Matches identifiers *)
+  | [+-*/()]             { return lexbuf }                    (* Medium: - Matches operators and parentheses *)
+  | eof                  { handle_eof() }                     (* Handle end of file or input *)
+
+{ 
+print("Lexer parsing completed.")
+}
