@@ -35,42 +35,60 @@ def afd_to_dict(afd):
 def generate_lexical_analyzer_code(tokens, output_file): #codigo fuente para analizador lexico
     code = '''
 # -*- coding: utf-8 -*-
+class Token:
+    def __init__(self, type_, value):
+        self.type = type_
+        self.value = value
+
+    def __str__(self):
+        return f"{self.type}: {self.value}"
+    
 class LexicalAnalyzer:
     def __init__(self, afds=None, state_dicts=None):
-        if afds is None:
-            afds = {}  #inicializa afds
-        if state_dicts is None:
-            state_dicts = {}  #inicializa state_dicts
-        self.afds = afds
-        self.state_dicts = state_dicts
+        self.afds = afds if afds is not None else {}  # inicializa afds
+        self.state_dicts = state_dicts if state_dicts is not None else {}  # inicializa state_dicts
 
     def analyze(self, text):
         results = []
         errors = []
         i = 0
         while i < len(text):
-            if text[i].isdigit():  #manejo de numeros
+            if text[i] == '"' and (i + 1 < len(text) and text[i + 1] != "\\\\"):
+                result, i = self.handle_string(text, i)
+                if result is not None:
+                    results.append(Token("String", result))
+            elif text[i].isdigit():
                 num, i = self.handle_number(text, i)
-                results.append((num, "Number"))
-            elif text[i].isalpha() or text[i] == '_':  #menejo de identificadores
+                results.append(Token("Number", num))
+            elif text[i].isalpha() or text[i] == '_':
                 ident, i = self.handle_identifier(text, i)
-                results.append((ident, "Identifier"))
-            elif text[i].isspace():  #manejo de espacios en blanco
+                results.append(Token("Identifier", ident))
+            elif text[i].isspace():
                 i = self.handle_whitespace(text, i)
-            elif text[i] in "+-*/()=.,;:{}[]<>!&|%^'@":  #manejo de operadores y puntuacion
+            elif text[i] in "+-*/()=.,;:{}[]<>!&|%^'@":
                 op, i = self.handle_operator(text, i)
-                results.append((op, "Operator"))
-            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '/':  #manejo de comentarios de una linea
+                results.append(Token("Operator", op))
+            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '/':
                 i = self.handle_single_line_comment(text, i + 2)
-            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '*':  #manejo de comentarios multilinea
+            elif text[i] == '/' and i + 1 < len(text) and text[i + 1] == '*':
                 i = self.handle_multi_line_comment(text, i + 2)
-            else:  #manejo de caracteres desconocidos
+            else:
                 errors.append(f"Unknown character: {text[i]} at position {i}")
                 i += 1
         if errors:
-            error_message = "Errors found: " + " ".join(errors)
-            results.append((error_message, "Error"))
+            results.append(Token("Error", " ".join(errors)))
         return results
+    
+    def handle_string(self, text, i):
+        if text[i] == '"' and (i == 0 or text[i-1] != '\\\\'):  # Comienza una nueva cadena si no está escapada
+            i += 1
+            start = i
+            while i < len(text):
+                if text[i] == '"' and text[i-1] != '\\\\':  # Finaliza si encuentra una comilla no escapada
+                    return text[start:i], i + 1
+                i += 1
+            return text[start:], i  # Retorna lo que pueda si no encuentra el final
+        return None, i
 
     def handle_number(self, text, i):
         num = ""
