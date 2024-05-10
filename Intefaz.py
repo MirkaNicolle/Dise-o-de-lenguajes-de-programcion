@@ -1,6 +1,6 @@
 import tkinter as tk
 import importlib.util
-from Generador import read_yalex_file, generate_lexical_analyzer_code
+from generador_lexico import read_yalex_file, generate_lexical_analyzer_code
 from tkinter import filedialog, messagebox, scrolledtext, font
 
 class LexicalApp:
