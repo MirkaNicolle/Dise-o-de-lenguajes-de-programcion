@@ -53,7 +53,12 @@ class Token:
         return f"{self.type}: {self.value}"
     
 class LexicalAnalyzer:
-    def __init__(self, input_text):
+    def __init__(self, input_text=None):
+        self.input = input_text
+        self.current_position = 0
+        self.total_length = len(input_text) if input_text else 0
+
+    def set_input(self, input_text):
         self.input = input_text
         self.current_position = 0
         self.total_length = len(input_text)
@@ -200,3 +205,14 @@ class LexicalAnalyzer:
 '''
     with open(output_file, 'w', encoding='utf-8') as file:
         file.write(code)
+
+def main():
+    file_path_yalex = 'hard_especificaciones.yalex'  # Asegúrate de que la ruta al archivo YALex sea correcta
+    rules = read_yalex_file(file_path_yalex)  # Carga las definiciones de tokens
+
+    # Especifica un nombre de archivo de salida para el código del analizador léxico generado
+    output_file = 'lexical_analyzer.py'
+    generate_lexical_analyzer_code(rules, output_file)
+
+if __name__ == "__main__":
+    main()
