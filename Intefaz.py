@@ -48,9 +48,9 @@ class AnalysisApp(tk.Frame):
                 text = file.read()
             if self.lexical_analyzer:
                 tokens = self.lexical_analyzer.analyze(text)
-                self.display_results(tokens)
+                self.display_tokens(tokens)
                 if self.sintactic_analyzer:
-                    self.run_sintactic_analysis(tokens)
+                    self.run_sintactic_analysis(tokens)  
             else:
                 messagebox.showerror("Error", "Lexical analyzer not generated.")
 
@@ -59,25 +59,25 @@ class AnalysisApp(tk.Frame):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         if type == 'lexical':
-            self.lexical_analyzer = module.LexicalAnalyzer()  # Assuming LexicalAnalyzer does not require initialization arguments
+            self.lexical_analyzer = module.LexicalAnalyzer()
             self.result_text.insert(tk.END, "Lexical analyzer generated and loaded successfully.\n")
         elif type == 'sintactic':
-            self.sintactic_analyzer = module.Parser(self.lexical_analyzer)
+            self.sintactic_analyzer = module.Parser()  
             self.result_text.insert(tk.END, "Sintactic analyzer generated and loaded successfully.\n")
-
-    def display_results(self, tokens):
-        self.result_text.insert(tk.END, "Analyzing text...\n")
+    
+    def display_tokens(self, tokens):
+        self.result_text.insert(tk.END, "Tokens Found:\n")
         for token in tokens:
-            self.result_text.insert(tk.END, f"{token.type}: {token.value}\n")
+            self.result_text.insert(tk.END, f"{token.type}: {token.value}\n") 
 
     def run_sintactic_analysis(self, tokens):
         if not self.sintactic_analyzer:
             messagebox.showerror("Error", "Sintactic analyzer not loaded.")
             return
-        self.sintactic_analyzer.set_tokens(tokens)
+        self.sintactic_analyzer.set_tokens(tokens)  #
         try:
-            parsed_result = self.sintactic_analyzer.parse_expression()
-            self.result_text.insert(tk.END, f"\nParsed structure:\n{parsed_result}")
+            parsed_structure = self.sintactic_analyzer.parse_expression()
+            self.result_text.insert(tk.END, f"\nParsed structure:\n{parsed_structure}")
         except Exception as e:
             messagebox.showerror("Error", f"Syntactic analysis failed: {e}")
             self.result_text.insert(tk.END, f"Error: {str(e)}\n")
