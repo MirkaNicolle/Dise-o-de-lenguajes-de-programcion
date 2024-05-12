@@ -23,16 +23,22 @@ def read_yalex_file(file_path):
 
 class Grammar:
     def __init__(self):
-        self.tokens = {}
         self.productions = {}
+        self.tokens = set()
+        self.non_terminals = set()
+        self.first_sets = {}
+        self.follow_sets = {}
+        self.start_symbol = None
+        self.augmented_start = 'S'
 
-    def add_token(self, token, token_type):
-        self.tokens[token] = token_type
+    def add_token(self, token):
+        self.tokens.add(token)
 
     def add_production(self, head, production):
         if head not in self.productions:
             self.productions[head] = []
-        self.productions[head].append(production)
+        self.productions[head].append(tuple(production.split()))
+        self.non_terminals.add(head)
 
 def parse_yapar_file(filepath):
     grammar = Grammar()
@@ -45,18 +51,23 @@ def parse_yapar_file(filepath):
             if line.startswith('%token'):
                 parts = line.split()
                 if len(parts) > 1:
-                    grammar.add_token(parts[1], 'TOKEN')
+                    grammar.add_token(parts[1])
             elif line == '%%':
                 reading_productions = True
             elif reading_productions:
                 if line.startswith('rule'):
                     current_production = line.split('=')[0].strip().split()[1]
+                    if grammar.start_symbol is None:
+                        grammar.start_symbol = current_production
                 elif line.startswith('|') or line.endswith(';'):
                     cleaned_line = line.strip('|').strip(';').strip()
                     if cleaned_line:
                         grammar.add_production(current_production, cleaned_line)
             elif line.startswith('/*') or line == '}' or line == '{' or line.startswith('print'):
                 continue  
+
+    grammar.productions[grammar.augmented_start] = [(grammar.start_symbol,)]
+
     return grammar
 
 def read_file(file_path):
@@ -68,17 +79,14 @@ def main():
     yalex_path = 'hard_especificaciones.yalex'
     yapar_path = 'especificaciones_yapar.yalp'
 
-    # Crear analizadores
     lexical_rules = read_yalex_file(yalex_path)
     grammar_rules = parse_yapar_file(yapar_path)
 
     lexical_analyzer = LexicalAnalyzer(lexical_rules)
     parser = Parser()
 
-    # Ruta del archivo de texto de entrada
-    input_file_path = 'hard.txt'  # Asegúrate de que este archivo exista en tu directorio o especifica la ruta completa
+    input_file_path = 'medium.txt' 
 
-    # Leer el archivo de entrada
     input_text = read_file(input_file_path)
 
     lexical_analyzer.set_input(input_text)
@@ -91,12 +99,16 @@ def main():
         tokens.append(token)
         print(f"Token: Type={token.type}, Value={token.value}")
 
-    parser.set_tokens(tokens)
+    parser = Parser(tokens)
     try:
-        parser.parse()
-        print("Parsing successful.")
+        parse_tree = parser.parse()
+        print(" ")
+        print("Syntactic analysis")
+        print(parse_tree)
+        
     except Exception as e:
-        print(f"Parsing failed: {e}")
+        print(e)
+
 
 if __name__ == "__main__":
     main()
