@@ -2,13 +2,14 @@ from grammar import grammar
 import graphviz
 
 class LR0Automaton:
-    def __init__(self, grammar):
+    def __init__(self, grammar, common_productions=None):
         self.grammar = grammar
-        self.states = []  # States in the automaton
-        self.transitions = {}  # Transitions between states
+        self.common_productions = common_productions or []
+        self.states = []
+        self.transitions = {}
 
     def closure(self, items):
-        closure = set(items)  # Asegúrate de que items ya sean tuplas
+        closure = set(items)
         changed = True
         while changed:
             changed = False
@@ -16,7 +17,6 @@ class LR0Automaton:
             for (head, body, dot_position) in closure:
                 if dot_position < len(body) and body[dot_position] in self.grammar.non_terminals:
                     for production in self.grammar.productions[body[dot_position]]:
-                        # Convertir body y production a tuplas si no lo son
                         item = (body[dot_position], tuple(production), 0)
                         if item not in closure:
                             new_items.add(item)
@@ -26,14 +26,18 @@ class LR0Automaton:
 
     def goto(self, items, symbol):
         goto_set = set()
-        for (head, body, dot_position) in items:
-            if dot_position < len(body) and body[dot_position] == symbol:
-                goto_set.add((head, body, dot_position + 1))
+        for (head, body, pos) in items:
+            if pos < len(body) and body[pos] == symbol:
+                new_item = (head, body, pos + 1)
+                goto_set.add(new_item)
         return self.closure(goto_set)
 
     def build_automaton(self):
-        init_item = (self.grammar.augmented_start, tuple(['.', self.grammar.start_symbol]), 0)
-        init_state = self.closure([init_item])
+        init_items = [(self.grammar.augmented_start, tuple(['.', self.grammar.start_symbol]), 0)]
+        for prod in self.common_productions:
+            init_items.append((prod[0], tuple(['.', *prod[1]]), 0))
+
+        init_state = self.closure(init_items)
 
         self.states.append(init_state)
         unmarked_states = [init_state]
@@ -45,7 +49,7 @@ class LR0Automaton:
 
             for symbol in self.grammar.tokens.union(self.grammar.non_terminals):
                 next_state = self.goto(current_state, symbol)
-                if next_state and next_state not in self.states:
+                if next_state and tuple(next_state) not in state_index:
                     state_index[tuple(next_state)] = len(self.states)
                     self.states.append(next_state)
                     unmarked_states.append(next_state)
@@ -66,7 +70,8 @@ class LR0Automaton:
 
         dot.render('lr0_automaton', view=True)
 
-# Example usage
-lr0_automaton = LR0Automaton(grammar)
+common_productions = [('expression', 'PLUS', 'term')]
+
+lr0_automaton = LR0Automaton(grammar, common_productions)
 lr0_automaton.build_automaton()
 lr0_automaton.visualize()
