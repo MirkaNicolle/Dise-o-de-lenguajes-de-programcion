@@ -11,8 +11,8 @@ class Token:
         self.type = type_
         self.value = value
 
-    def __str__(self):
-        return f"{self.type}: {self.value}"
+    def __repr__(self):  
+        return f"Token('{self.type}', '{self.value}')"
 
 class LexicalAnalyzer:
     def __init__(self, input_text=None):
@@ -20,14 +20,14 @@ class LexicalAnalyzer:
         self.current_position = 0
         self.total_length = len(input_text) if input_text else 0
 
-    def process_regex_to_afd(self, regex):  # Cambiado a método de instancia
-        postfix = to_postfix(regex)  # Conversión de expresión regular en notación postfix
-        afn = regex_to_afn(postfix)  # Generación de AFN
-        afd = afn_to_afd(afn)  # Conversión de AFN a AFD
-        minimized_afd = minimize_afd(afd)  # Minimización de AFD
+    def process_regex_to_afd(self, regex):  
+        postfix = to_postfix(regex)  
+        afn = regex_to_afn(postfix) 
+        afd = afn_to_afd(afn) 
+        minimized_afd = minimize_afd(afd)  
         return minimized_afd
 
-    def afd_to_dict(self, afd):  # Cambiado a método de instancia
+    def afd_to_dict(self, afd):  
         state_dict = {}
         for state in afd.states:
             state_id = id(state)
