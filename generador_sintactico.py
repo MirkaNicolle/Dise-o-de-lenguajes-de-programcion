@@ -15,9 +15,13 @@ class Token:
         self.type = type_
         self.value = value
 
+    def __repr__(self):  
+        return f"Token('{self.type}', '{self.value}')"
+
 class Parser:
     def __init__(self, tokens=None):
         self.set_tokens(tokens)
+        self.parse_tree = None  
 
     def set_tokens(self, tokens):
         self.tokens = tokens
@@ -33,37 +37,38 @@ class Parser:
 
     def eat(self, token_type):
         if self.current_token and self.current_token.type == token_type:
+            token = self.current_token
             self.advance()
+            return token
         else:
-            raise Exception(f"Expected {token_type}, found {self.current_token.type if self.current_token else 'EOF'}")
+            expected = token_type
+            found = self.current_token.type if self.current_token else 'EOF'
+            raise Exception(f"Expected token {expected}, but found {found}")
 
     def parse_expression(self):
-        if self.current_token and self.current_token.type in ['PLUS', 'MINUS']:
-            left = self.parse_term()
-            while self.current_token and self.current_token.type in ['PLUS', 'MINUS']:
-                operator = self.current_token.type
-                self.eat(operator)
-                right = self.parse_term()
-                left = Node(operator, [left, right])
-        else:
-            left = self.parse_term()
-        return left
+        node = self.parse_term()
+        while self.current_token and self.current_token.type in ['PLUS', 'MINUS']:
+            operator = self.current_token.type
+            self.eat(operator)
+            right = self.parse_term()
+            node = Node(operator, [node, right])
+        return node
 
     def parse_term(self):
-        left = self.parse_factor()
+        node = self.parse_factor()
         while self.current_token and self.current_token.type in ['MULT', 'DIV']:
             operator = self.current_token.type
             self.eat(operator)
             right = self.parse_factor()
-            left = Node(operator, [left, right])
-        return left
+            node = Node(operator, [node, right])
+        return node
 
     def parse_factor(self):
         if self.current_token.type == 'LPAREN':
             self.eat('LPAREN')
-            expr = self.parse_expression()
+            node = self.parse_expression()
             self.eat('RPAREN')
-            return expr
+            return node
         elif self.current_token.type == 'NUMBER':
             value = self.current_token.value
             self.eat('NUMBER')
@@ -72,9 +77,17 @@ class Parser:
             value = self.current_token.value
             self.eat('IDENTIFIER')
             return Node('identifier', [], value)
-        
+
     def parse(self):
-        print("Parsing has started.")  # Mensaje simple para confirmar que el método funciona.
-        # Implementar la lógica de parsing aquí, actualmente solo imprime los tokens recibidos.
-        '''for token in self.tokens:
-            print(f"Token: {token.type}, Value: {token.value}")'''
+        self.parse_tree = self.parse_expression() 
+        #print("Parsing completed.")  # Mensaje de confirmación de finalización
+        return self.parse_tree
+
+'''# Ejemplo de uso
+tokens = [Token('NUMBER', '123'), Token('PLUS', '+'), Token('NUMBER', '456')]
+parser = Parser(tokens)
+try:
+    parse_tree = parser.parse()
+    print(parse_tree)
+except Exception as e:
+    print(e)'''
