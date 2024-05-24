@@ -80,14 +80,4 @@ class Parser:
 
     def parse(self):
         self.parse_tree = self.parse_expression() 
-        #print("Parsing completed.")  # Mensaje de confirmación de finalización
         return self.parse_tree
-
-'''# Ejemplo de uso
-tokens = [Token('NUMBER', '123'), Token('PLUS', '+'), Token('NUMBER', '456')]
-parser = Parser(tokens)
-try:
-    parse_tree = parser.parse()
-    print(parse_tree)
-except Exception as e:
-    print(e)'''
