@@ -76,7 +76,7 @@ def read_file(file_path):
         return file.read()
 
 def main():
-    yalex_path = 'hard_especificaciones.yalex'
+    yalex_path = 'easy_especificaciones.yalex'
     yapar_path = 'especificaciones_yapar.yalp'
 
     lexical_rules = read_yalex_file(yalex_path)
@@ -85,7 +85,7 @@ def main():
     lexical_analyzer = LexicalAnalyzer(lexical_rules)
     parser = Parser()
 
-    input_file_path = 'medium.txt' 
+    input_file_path = 'easy.txt' 
 
     input_text = read_file(input_file_path)
 
