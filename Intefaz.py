@@ -1,4 +1,3 @@
-import graphviz
 import tkinter as tk
 from tkinter import filedialog, Text, messagebox
 
@@ -6,6 +5,7 @@ from generador_lexico import LexicalAnalyzer
 from generador_sintactico import Parser
 from generadores import parse_yapar_file, read_yalex_file
 from automaton import LR0Automaton
+from visualizacion import visualize_automaton
 
 class MainApplication:
     def __init__(self, root):
@@ -26,7 +26,8 @@ class MainApplication:
         run_automaton_button = tk.Button(button_frame, text="Generar Autómata LR(0)", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3399ff", command=self.generate_automaton)
         run_automaton_button.pack(side=tk.LEFT, padx=20, expand=True)
 
-        self.grammar = None  
+        self.grammar = None
+        self.automaton = None
 
     def open_file(self):
         filename = filedialog.askopenfilename(initialdir="/", title="Seleccionar Archivo", filetypes=(("text files", "*.txt"), ("all files", "*.*")))
@@ -39,7 +40,7 @@ class MainApplication:
         yapar_path = 'especificaciones_yapar.yalp'
 
         lexical_rules = read_yalex_file(yalex_path)
-        grammar_rules = parse_yapar_file(yapar_path)
+        self.grammar = parse_yapar_file(yapar_path)  
 
         lexical_analyzer = LexicalAnalyzer(lexical_rules)
         lexical_analyzer.set_input(input_text)
@@ -64,10 +65,10 @@ class MainApplication:
     def generate_automaton(self):
         if self.grammar:
             try:
-                automaton = LR0Automaton(self.grammar)
-                automaton.build_automaton()
-                automaton_output = automaton.visualize()
-                self.output_area.insert(tk.END, automaton_output + "\n")
+                self.automaton = LR0Automaton(self.grammar)
+                dot = visualize_automaton(self.automaton)
+                dot.render('lr0_automaton', view=True)
+                self.output_area.insert(tk.END, "Autómata LR(0) generado y visualizado correctamente.\n")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to generate automaton: {e}")
         else:
