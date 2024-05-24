@@ -1,77 +1,59 @@
-from grammar import grammar
-import graphviz
+from grammar import Grammar
 
 class LR0Automaton:
-    def __init__(self, grammar, common_productions=None):
+    def __init__(self, grammar):
         self.grammar = grammar
-        self.common_productions = common_productions or []
         self.states = []
         self.transitions = {}
+        self.start_state = None
+        self.build_automaton()
 
     def closure(self, items):
-        closure = set(items)
-        changed = True
-        while changed:
-            changed = False
+        closure_set = set(items)
+        while True:
             new_items = set()
-            for (head, body, dot_position) in closure:
-                if dot_position < len(body) and body[dot_position] in self.grammar.non_terminals:
-                    for production in self.grammar.productions[body[dot_position]]:
-                        item = (body[dot_position], tuple(production), 0)
-                        if item not in closure:
-                            new_items.add(item)
-                            changed = True
-            closure.update(new_items)
-        return closure
+            for head, body, dot_pos in closure_set:
+                if dot_pos < len(body):
+                    next_symbol = body[dot_pos]
+                    if next_symbol in self.grammar.productions:
+                        for production in self.grammar.productions[next_symbol]:
+                            new_item = (next_symbol, production, 0)
+                            if new_item not in closure_set:
+                                new_items.add(new_item)
+            if not new_items:
+                break
+            closure_set.update(new_items)
+        return closure_set
 
     def goto(self, items, symbol):
         goto_set = set()
-        for (head, body, pos) in items:
-            if pos < len(body) and body[pos] == symbol:
-                new_item = (head, body, pos + 1)
+        for head, body, dot_pos in items:
+            if dot_pos < len(body) and body[dot_pos] == symbol:
+                new_item = (head, body, dot_pos + 1)
                 goto_set.add(new_item)
         return self.closure(goto_set)
 
     def build_automaton(self):
-        init_items = [(self.grammar.augmented_start, tuple(['.', self.grammar.start_symbol]), 0)]
-        for prod in self.common_productions:
-            init_items.append((prod[0], tuple(['.', *prod[1]]), 0))
-
-        init_state = self.closure(init_items)
-
-        self.states.append(init_state)
-        unmarked_states = [init_state]
-        state_index = {tuple(init_state): 0}
+        start_production = (self.grammar.augmented_start, (self.grammar.start_symbol,), 0)
+        self.start_state = self.closure([start_production])
+        states = [self.start_state]
+        self.states.append(self.start_state)
+        unmarked_states = [self.start_state]
 
         while unmarked_states:
-            current_state = unmarked_states.pop(0)
-            current_index = state_index[tuple(current_state)]
+            current_state = unmarked_states.pop()
+            symbols = self._get_symbols(current_state)
+            for symbol in symbols:
+                new_state = self.goto(current_state, symbol)
+                if new_state and new_state not in states:
+                    states.append(new_state)
+                    unmarked_states.append(new_state)
+                    self.states.append(new_state)
+                self.transitions[(self.states.index(current_state), symbol)] = self.states.index(new_state)
 
-            for symbol in self.grammar.tokens.union(self.grammar.non_terminals):
-                next_state = self.goto(current_state, symbol)
-                if next_state and tuple(next_state) not in state_index:
-                    state_index[tuple(next_state)] = len(self.states)
-                    self.states.append(next_state)
-                    unmarked_states.append(next_state)
-                    self.transitions[(current_index, symbol)] = state_index[tuple(next_state)]
-
-    def visualize(self):
-        dot = graphviz.Digraph(comment='LR(0) Automaton')
-
-        for i, state in enumerate(self.states):
-            label = "\n".join([
-                f"{item[0]} -> {' '.join(item[1][:item[2]] + ('*',) + item[1][item[2]:])}"
-                for item in state
-            ])
-            dot.node(str(i), label=label)
-
-        for (from_state, symbol), to_state in self.transitions.items():
-            dot.edge(str(from_state), str(to_state), label=symbol)
-
-        dot.render('lr0_automaton', view=True)
-
-common_productions = [('expression', 'PLUS', 'term')]
-
-lr0_automaton = LR0Automaton(grammar, common_productions)
-lr0_automaton.build_automaton()
-lr0_automaton.visualize()
+    def _get_symbols(self, items):
+        symbols = set()
+        for _, body, dot_pos in items:
+            if dot_pos < len(body):
+                symbols.add(body[dot_pos])
+        return symbols
