@@ -104,9 +104,9 @@ class LexicalAnalyzer:
                 self.current_position += 1
         if errors:
             results.append(Token("Error", " ".join(errors)))
-        for token in results:
+        '''for token in results:
             print(f"Token created: Type={token.type}, Value={token.value}") 
-        return results
+        return results'''
     
     def skip_whitespace(self):
         while self.current_position < self.total_length and self.input[self.current_position].isspace():
