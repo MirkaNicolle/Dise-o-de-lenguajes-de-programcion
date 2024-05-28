@@ -1,5 +1,4 @@
 '''Laboratorio E'''
-
 from generador_lexico import LexicalAnalyzer
 from generador_sintactico import Parser
 
@@ -75,40 +74,26 @@ def read_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return file.read()
 
-def main():
-    yalex_path = 'easy_especificaciones.yalex'
-    yapar_path = 'especificaciones_yapar.yalp'
-
+def run_analysis(input_text, yalex_path='easy_especificaciones.yalex', yapar_path='especificaciones_yapar.yalp'):
     lexical_rules = read_yalex_file(yalex_path)
     grammar_rules = parse_yapar_file(yapar_path)
 
     lexical_analyzer = LexicalAnalyzer(lexical_rules)
-    parser = Parser()
-
-    input_file_path = 'easy.txt' 
-
-    input_text = read_file(input_file_path)
-
     lexical_analyzer.set_input(input_text)
     tokens = []
-    print("Generated Tokens:")
+    output = "Generated Tokens:\n"
     while True:
         token = lexical_analyzer.get_next_token()
         if token is None:
             break
         tokens.append(token)
-        print(f"Token: Type={token.type}, Value={token.value}")
+        output += f"Token: Type={token.type}, Value={token.value}\n"
 
     parser = Parser(tokens)
     try:
         parse_tree = parser.parse()
-        print(" ")
-        print("Syntactic analysis")
-        print(parse_tree)
-        
+        output += "\nSyntactic Analysis:\n"
+        output += str(parse_tree) + "\n"
     except Exception as e:
-        print(e)
-
-
-if __name__ == "__main__":
-    main()
+        output += f"Error parsing: {e}\n"
+    return output
