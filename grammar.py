@@ -98,8 +98,3 @@ class Grammar:
                         else:
                             # para los terminales, reinicia follow_temp con el conjunto FIRST del simbolo, si existe
                             follow_temp = self.first_sets[symbol] if symbol in self.first_sets else set()
-
-# Using the Grammar
-grammar = Grammar()
-grammar.primero_sets()
-grammar.siguiente_sets()
