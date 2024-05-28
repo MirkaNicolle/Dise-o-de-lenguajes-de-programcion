@@ -3,7 +3,7 @@ from tkinter import filedialog, Text, messagebox
 
 from generador_lexico import LexicalAnalyzer
 from generador_sintactico import Parser
-from generadores import parse_yapar_file, read_yalex_file
+from generadores import parse_yapar_file, read_yalex_file, run_analysis  # Importa run_analysis
 from automaton import LR0Automaton
 from visualizacion import visualize_automaton
 
@@ -33,34 +33,22 @@ class MainApplication:
         filename = filedialog.askopenfilename(initialdir="/", title="Seleccionar Archivo", filetypes=(("text files", "*.txt"), ("all files", "*.*")))
         if filename:
             input_text = self.read_file(filename)
+            self.clear_output_area()
             self.process_text(input_text)
+
+    def clear_output_area(self):
+        self.output_area.delete('1.0', tk.END)
 
     def process_text(self, input_text):
         yalex_path = 'hard_especificaciones.yalex'
         yapar_path = 'especificaciones_yapar.yalp'
 
-        lexical_rules = read_yalex_file(yalex_path)
-        self.grammar = parse_yapar_file(yapar_path)  
+        self.clear_output_area()  # Limpia el área de salida antes de procesar el nuevo archivo
 
-        lexical_analyzer = LexicalAnalyzer(lexical_rules)
-        lexical_analyzer.set_input(input_text)
-        tokens = []
-        self.output_area.insert(tk.END, "Generated Tokens:\n")
-        while True:
-            token = lexical_analyzer.get_next_token()
-            if token is None:
-                break
-            tokens.append(token)
-            self.output_area.insert(tk.END, f"Token: Type={token.type}, Value={token.value}\n")
+        output = run_analysis(input_text, yalex_path, yapar_path)
+        self.output_area.insert(tk.END, output)
 
-        parser = Parser(tokens)
-        try:
-            parse_tree = parser.parse()
-            self.output_area.insert(tk.END, "\nSyntactic Analysis:\n")
-            self.output_area.insert(tk.END, str(parse_tree) + "\n")
-            self.parse_tree = parse_tree  
-        except Exception as e:
-            self.output_area.insert(tk.END, f"Error parsing: {e}\n")
+        self.grammar = parse_yapar_file(yapar_path)  # Asegúrate de que self.grammar se inicialice aquí
 
     def generate_automaton(self):
         if self.grammar:
