@@ -1,5 +1,3 @@
-from grammar import Grammar
-
 class LR0Automaton:
     def __init__(self, grammar):
         self.grammar = grammar
