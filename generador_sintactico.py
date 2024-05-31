@@ -19,9 +19,11 @@ class Token:
         return f"Token('{self.type}', '{self.value}')"
 
 class Parser:
-    def __init__(self, tokens=None):
+    def __init__(self, grammar, slr_table, tokens=None):
+        self.grammar = grammar
+        self.slr_table = slr_table
         self.set_tokens(tokens)
-        self.parse_tree = None  
+        self.parse_tree = None
 
     def set_tokens(self, tokens):
         self.tokens = tokens
@@ -79,5 +81,26 @@ class Parser:
             return Node('identifier', [], value)
 
     def parse(self):
-        self.parse_tree = self.parse_expression() 
-        return self.parse_tree
+        stack = [0]
+        symbol_stack = []
+        while True:
+            state = stack[-1]
+            action = self.slr_table[state].get(self.current_token.type)
+            if action is None:
+                raise Exception(f"Syntax error: unexpected token {self.current_token.type}")
+            if action.startswith('shift'):
+                stack.append(int(action.split()[1]))
+                symbol_stack.append(self.current_token)
+                self.advance()
+            elif action.startswith('reduce'):
+                production = self.grammar.productions[int(action.split()[1])]
+                head, body = production[0], production[1]
+                for _ in body:
+                    stack.pop()
+                    symbol_stack.pop()
+                stack.append(self.slr_table[stack[-1]].get(head))
+                symbol_stack.append(head)
+            elif action == 'Accept':
+                return True
+            else:
+                raise Exception(f"Invalid action: {action}")
