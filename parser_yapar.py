@@ -1,27 +1,12 @@
-class Grammar:
-    def __init__(self):
-        self.productions = {}
-        self.tokens = set()
-        self.non_terminals = set()
-        self.first_sets = {}
-        self.follow_sets = {}
-        self.start_symbol = None
-        self.augmented_start = 'S'
-
-    def add_token(self, token):
-        self.tokens.add(token)
-
-    def add_production(self, head, production):
-        if head not in self.productions:
-            self.productions[head] = []
-        self.productions[head].append(tuple(production.split()))
-        self.non_terminals.add(head)
-
+from grammar import Grammar
 
 class YaparParser:
     def __init__(self, yapar_file):
         self.yapar_file = yapar_file
-        self.grammar = Grammar()
+        self.productions = []
+        self.tokens = set()
+        self.non_terminals = set()
+        self.start_symbol = None
         self.parse_yapar_file()
 
     def parse_yapar_file(self):
@@ -34,24 +19,22 @@ class YaparParser:
                 if line.startswith('%token'):
                     parts = line.split()
                     if len(parts) > 1:
-                        self.grammar.add_token(parts[1])
+                        self.tokens.add(parts[1])
                 elif line == '%%':
                     reading_productions = True
                 elif reading_productions:
                     if line.startswith('rule'):
                         current_production = line.split('=')[0].strip().split()[1]
-                        if self.grammar.start_symbol is None:
-                            self.grammar.start_symbol = current_production
+                        if self.start_symbol is None:
+                            self.start_symbol = current_production
                     elif line.startswith('|') or line.endswith(';'):
                         cleaned_line = line.strip('|').strip(';').strip()
-                        # Eliminar el contenido entre llaves manualmente
                         cleaned_line = self.remove_actions(cleaned_line)
                         if cleaned_line:
-                            self.grammar.add_production(current_production, cleaned_line)
+                            self.productions.append((current_production, cleaned_line.split()))
+                            self.non_terminals.add(current_production)
                 elif line.startswith('/*') or line == '}' or line == '{' or line.startswith('print'):
                     continue
-
-        self.grammar.productions[self.grammar.augmented_start] = [(self.grammar.start_symbol,)]
 
     def remove_actions(self, line):
         cleaned_line = ''
@@ -67,13 +50,19 @@ class YaparParser:
         return cleaned_line.strip()
 
     def get_grammar(self):
-        return self.grammar
+        # Crear el diccionario de producciones
+        production_dict = {}
+        for head, body in self.productions:
+            if head not in production_dict:
+                production_dict[head] = []
+            production_dict[head].append(body)
 
-# Ejemplo de uso
-if __name__ == "__main__":
-    yapar_parser = YaparParser('especificaciones_yapar.yalp')
+        return Grammar(production_dict, self.non_terminals, self.tokens, self.start_symbol)
+
+'''if __name__ == "__main__":
+    yapar_parser = YaparParser('hard_yapar.yalp')
     grammar = yapar_parser.get_grammar()
     print("Producciones:", grammar.productions)
-    print("Tokens:", grammar.tokens)
+    print("Tokens:", grammar.terminals)  # Cambiamos 'tokens' a 'terminals'
     print("No Terminales:", grammar.non_terminals)
-    print("Símbolo de Inicio:", grammar.start_symbol)
+    print("Símbolo de Inicio:", grammar.start_symbol)'''
