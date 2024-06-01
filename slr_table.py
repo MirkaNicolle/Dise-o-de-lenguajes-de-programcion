@@ -25,7 +25,7 @@ class SLRTable:
                             slr_table[state_key][terminal] = f'reduce {item.production}'
                 else:
                     next_symbol = item.next_symbol() if hasattr(item, 'next_symbol') else None
-                    if next_symbol in self.grammar.tokens:
+                    if next_symbol in self.grammar.terminals:  # Cambiamos tokens a terminals
                         next_state = self.automaton.goto(state, next_symbol)
                         next_state_key = frozenset(next_state)
                         slr_table[state_key][next_symbol] = f'shift {next_state_key}'
@@ -37,7 +37,7 @@ class SLRTable:
 
     def display_slr_table_as_text(self):
         result = ""
-        action_columns = list(self.grammar.tokens) + ['$']
+        action_columns = list(self.grammar.terminals) + ['$']  # Cambiamos tokens a terminals
         goto_columns = list(self.grammar.non_terminals)
         states = list(self.slr_table.keys())
 
@@ -71,3 +71,41 @@ class SLRTable:
 
         c.drawText(textobject)
         c.save()
+
+    def save_slr_table_as_csv(self, filepath='slr_table.csv'):
+        rows = []
+        action_columns = list(self.grammar.terminals) + ['$']  # Cambiamos tokens a terminals
+        goto_columns = list(self.grammar.non_terminals)
+        states = list(self.slr_table.keys())
+
+        for state in states:
+            state_repr = str(state)
+            actions = self.slr_table[state]
+            for symbol in action_columns:
+                if symbol in actions:
+                    rows.append((state_repr, symbol, actions[symbol]))
+            for non_terminal in goto_columns:
+                if non_terminal in actions:
+                    rows.append((state_repr, non_terminal, actions[non_terminal]))
+
+        df = pd.DataFrame(rows, columns=['State', 'Symbol', 'Action'])
+        df.to_csv(filepath, index=False)
+
+    def display_slr_table_as_dataframe(self):
+        rows = []
+        action_columns = list(self.grammar.terminals) + ['$']  # Cambiamos tokens a terminals
+        goto_columns = list(self.grammar.non_terminals)
+        states = list(self.slr_table.keys())
+
+        for state in states:
+            state_repr = str(state)
+            actions = self.slr_table[state]
+            for symbol in action_columns:
+                if symbol in actions:
+                    rows.append((state_repr, symbol, actions[symbol]))
+            for non_terminal in goto_columns:
+                if non_terminal in actions:
+                    rows.append((state_repr, non_terminal, actions[non_terminal]))
+
+        df = pd.DataFrame(rows, columns=['State', 'Symbol', 'Action'])
+        return df
