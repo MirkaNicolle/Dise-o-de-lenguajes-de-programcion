@@ -17,38 +17,39 @@ class MainApplication:
     def __init__(self, root):
         self.root = root
         root.title("Laboratorio E")
-        root.geometry("1000x800")
-        root.configure(bg='#b3d9ff')
+        root.geometry("1200x600")  # Aumentar el tamaño de la ventana
+        root.configure(bg='#003366')  # Fondo azul oscuro
 
-        self.output_area = Text(root, height=10, width=100, bg="#e6f2ff")
+        self.output_area = Text(root, height=20, width=120, bg="#e6f2ff")  # Hacer más grande la pantalla de resultados
         self.output_area.pack(pady=20)
 
-        button_frame = tk.Frame(root, bg='#b3d9ff')
-        button_frame.pack(fill=tk.X, pady=10)
+        button_frame = tk.Frame(root, bg='#003366')  # Fondo azul oscuro
+        button_frame.pack(fill=tk.BOTH, pady=10)
 
-        open_yalex_button = tk.Button(button_frame, text="Cargar YALex", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3399ff", command=self.open_yalex_file)
-        open_yalex_button.pack(side=tk.LEFT, padx=20, expand=True)
+        # Crear botones
+        buttons = [
+            ("Cargar YALex", self.open_yalex_file),
+            ("Cargar YAPar", self.open_yapar_file),
+            ("Generar Autómata LR(0)", self.generate_automaton),
+            ("Calcular Primero", self.calculate_first_sets),
+            ("Calcular Siguiente", self.calculate_follow_sets),
+            ("Guardar Tabla SLR como PDF", self.save_slr_table_as_pdf),
+            ("Analizar Archivo de Entrada", self.analyze_input_file)
+        ]
 
-        open_yapar_button = tk.Button(button_frame, text="Cargar YAPar", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3399ff", command=self.open_yapar_file)
-        open_yapar_button.pack(side=tk.LEFT, expand=True)
-
-        run_automaton_button = tk.Button(button_frame, text="Generar Autómata LR(0)", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3399ff", command=self.generate_automaton)
-        run_automaton_button.pack(side=tk.LEFT, expand=True)
-
-        first_set_button = tk.Button(button_frame, text="Calcular Primero", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3399ff", command=self.calculate_first_sets)
-        first_set_button.pack(side=tk.LEFT, expand=True)
-
-        follow_set_button = tk.Button(button_frame, text="Calcular Siguiente", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3399ff", command=self.calculate_follow_sets)
-        follow_set_button.pack(side=tk.LEFT, expand=True)
-
-        slr_table_button = tk.Button(button_frame, text="Guardar Tabla SLR como PDF", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3399ff", command=self.save_slr_table_as_pdf)
-        slr_table_button.pack(side=tk.LEFT, expand=True)
+        # Distribuir botones en un formato de mosaico
+        for i, (text, command) in enumerate(buttons):
+            row = i // 3
+            col = i % 3
+            button = tk.Button(button_frame, text=text, font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3399ff", command=command)
+            button.grid(row=row, column=col, padx=20, pady=10, sticky='ew')
 
         self.grammar = None
         self.automaton = None
         self.slr_table = None
         self.yalex_path = None
         self.yapar_path = None
+        self.input_path = None
 
     def open_yalex_file(self):
         filename = filedialog.askopenfilename(initialdir="/", title="Seleccionar Archivo YALex", filetypes=(("YALex files", "*.yalex"), ("all files", "*.*")))
@@ -127,6 +128,41 @@ class MainApplication:
             os.system(f"start {pdf_filename}")  # Comando para Windows
         else:
             messagebox.showerror("Error", "Gramática no cargada. Por favor, cargue un archivo YAPar y valide la sintaxis primero.")
+
+    def analyze_input_file(self):
+        filename = filedialog.askopenfilename(initialdir="/", title="Seleccionar Archivo de Entrada", filetypes=(("Text files", "*.txt"), ("all files", "*.*")))
+        if filename:
+            self.input_path = filename
+            self.output_area.insert(tk.END, f"Archivo de entrada cargado: {filename}\n")
+            self.run_analysis()
+
+    def run_analysis(self):
+        if self.input_path and self.grammar:
+            with open(self.input_path, 'r', encoding='utf-8') as file:
+                input_text = file.read()
+
+            lexical_analyzer = LexicalAnalyzer(input_text)
+            tokens = []
+            token = lexical_analyzer.get_next_token()
+            while token:
+                tokens.append(token)
+                token = lexical_analyzer.get_next_token()
+
+            # Mostrar tokens encontrados
+            self.output_area.insert(tk.END, "Tokens encontrados:\n")
+            for token in tokens:
+                self.output_area.insert(tk.END, f"{token}\n")
+
+            self.slr_table = SLRTable(self.grammar).slr_table
+            parser = Parser(self.grammar, self.slr_table, tokens)
+
+            try:
+                parser.parse()
+                self.output_area.insert(tk.END, "Análisis sintáctico completado exitosamente.\n")
+            except Exception as e:
+                self.output_area.insert(tk.END, f"Error de análisis sintáctico: {e}\n")
+        else:
+            messagebox.showerror("Error", "Debe cargar un archivo de entrada y un archivo YAPar antes de continuar.")
 
     @staticmethod
     def read_file(file_path):
