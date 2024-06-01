@@ -98,8 +98,12 @@ class Parser:
                 for _ in body:
                     stack.pop()
                     symbol_stack.pop()
-                stack.append(self.slr_table[stack[-1]].get(head))
-                symbol_stack.append(head)
+                goto_state = self.slr_table[stack[-1]].get(head)
+                if goto_state is not None:
+                    stack.append(goto_state)
+                    symbol_stack.append(head)
+                else:
+                    raise Exception(f"Error: no goto state for {head} from state {stack[-1]}")
             elif action == 'Accept':
                 return True
             else:
