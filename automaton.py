@@ -3,33 +3,52 @@ class LR0Automaton:
         self.grammar = grammar
         self.states = []
         self.transitions = {}
-        self.start_state = None
         self.build_automaton()
+
+    def build_automaton(self):
+        start_production = (self.grammar.augmented_start, (self.grammar.start_symbol,), 0)
+        self.start_state = self.closure([start_production])
+        self.states.append(self.start_state)
+
+        queue = [self.start_state]
+        visited = set()
+        visited.add(frozenset(self.start_state))
+
+        while queue:
+            state = queue.pop(0)
+            for symbol in self.grammar.terminals | self.grammar.non_terminals:
+                new_state = self.goto(state, symbol)
+                if not new_state:
+                    continue
+                frozenset_new_state = frozenset(new_state)
+                if frozenset_new_state not in visited:
+                    visited.add(frozenset_new_state)
+                    queue.append(new_state)
+                    self.states.append(new_state)
+                self.transitions[(frozenset(state), symbol)] = frozenset_new_state
 
     def closure(self, items):
         closure_set = set(items)
-        while True:
-            new_items = set()
-            for head, body, dot_pos in closure_set:
-                if dot_pos < len(body):
-                    next_symbol = body[dot_pos]
-                    if next_symbol in self.grammar.productions:
-                        for production in self.grammar.productions[next_symbol]:
-                            new_item = (next_symbol, production, 0)
-                            if new_item not in closure_set:
-                                new_items.add(new_item)
-            if not new_items:
-                break
-            closure_set.update(new_items)
-        return closure_set
+        queue = items[:]
+        while queue:
+            head, body, dot_position = queue.pop(0)
+            if dot_position < len(body):
+                symbol = body[dot_position]
+                if symbol in self.grammar.non_terminals:
+                    for production in self.grammar.productions[symbol]:
+                        new_item = (symbol, tuple(production), 0)
+                        if new_item not in closure_set:
+                            closure_set.add(new_item)
+                            queue.append(new_item)
+        return list(closure_set)
 
-    def goto(self, items, symbol):
-        goto_set = set()
-        for head, body, dot_pos in items:
-            if dot_pos < len(body) and body[dot_pos] == symbol:
-                new_item = (head, body, dot_pos + 1)
-                goto_set.add(new_item)
-        return self.closure(goto_set)
+    def goto(self, state, symbol):
+        goto_set = []
+        for head, body, dot_position in state:
+            if dot_position < len(body) and body[dot_position] == symbol:
+                new_item = (head, body, dot_position + 1)
+                goto_set.append(new_item)
+        return self.closure(goto_set) if goto_set else []
 
     def build_automaton(self):
         start_production = (self.grammar.augmented_start, (self.grammar.start_symbol,), 0)
