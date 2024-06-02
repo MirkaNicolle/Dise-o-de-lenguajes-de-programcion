@@ -165,18 +165,22 @@ class MainApplication:
 
             # Realizar análisis sintáctico
             error_message = ""
-            try:
-                self.parser.set_tokens(tokens)
-                if self.parser.parse():
-                    error_message = "Análisis sintáctico completado sin errores."
-                else:
-                    error_message = "Se encontraron errores en el análisis sintáctico."
-            except Exception as e:
-                error_message = f"Error de análisis sintáctico: {str(e)}"
+            if self.parser:
+                try:
+                    self.parser.set_tokens(tokens)
+                    parsing_result = self.parser.parse()
+                    if parsing_result:
+                        error_message = "Análisis sintáctico completado sin errores."
+                    else:
+                        error_message = "Se encontraron errores en el análisis sintáctico."
+                except Exception as e:
+                    error_message = f"Error de análisis sintáctico: {str(e)}"
 
-            self.output_area.insert(tk.END, "\nRegistro de acciones:\n")
-            for action in self.parser.actions_log:
-                self.output_area.insert(tk.END, f"{action}\n")
+                self.output_area.insert(tk.END, "\nRegistro de acciones:\n")
+                for action in self.parser.actions_log:
+                    self.output_area.insert(tk.END, f"{action}\n")
+            else:
+                error_message = "El analizador sintáctico no se ha inicializado correctamente."
 
             self.output_area.insert(tk.END, f"\n{error_message}\n")
 
