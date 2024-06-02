@@ -2,8 +2,8 @@
 /* Definición de parser */
 
 /* INICIA sección de TOKENS */
-%token Identifier
-%token Number
+%token IDENTIFIER
+%token NUMBER
 %token PLUS
 %token MINUS
 %token MULT
@@ -30,7 +30,7 @@ rule term =
 
 rule factor =
     LPAREN expression RPAREN         { return expression }
-  | Identifier                       { return create_leaf('identifier', Identifier) }
+  | IDENTIFIER                      { return create_leaf('identifier', Identifier) }
   | NUMBER                           { return create_leaf('number', NUMBER) }
 ;
 /* FINALIZA sección de PRODUCCIONES */
