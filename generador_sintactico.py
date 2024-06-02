@@ -22,12 +22,11 @@ class Parser:
     def __init__(self, grammar, slr_table, tokens=None):
         self.grammar = grammar
         self.slr_table = slr_table
-        self.set_tokens(tokens)
-        self.parse_tree = None
-        self.actions_log = []
+        self.actions_log = []  # Registro de acciones
+        self.set_tokens(tokens if tokens is not None else [])  # Asegurarse de que tokens sea una lista
 
     def set_tokens(self, tokens):
-        self.tokens = tokens
+        self.tokens = [Token(token.type, token.value) for token in tokens]
         self.current_index = 0
         self.current_token = self.tokens[self.current_index] if self.tokens else None
 
@@ -36,61 +35,41 @@ class Parser:
         if self.current_index < len(self.tokens):
             self.current_token = self.tokens[self.current_index]
         else:
-            self.current_token = Token('$', '$')  # End of input
+            self.current_token = None
 
     def parse(self):
         stack = [0]
         symbol_stack = []
         self.actions_log.append("Parsing started.")
-        try:
-            while True:
-                state = stack[-1]
-                action = self.slr_table[state].get(self.current_token.type)
-                if action is None:
-                    error_msg = f"Syntax error: unexpected token '{self.current_token.type}' at position {self.current_index}"
-                    self.actions_log.append(error_msg)
-                    raise Exception(error_msg)
-                if action.startswith('shift'):
-                    stack.append(int(action.split()[1]))
-                    symbol_stack.append(self.current_token)
-                    self.actions_log.append(f"Shift: {self.current_token} -> State {stack[-1]}")
-                    self.advance()
-                elif action.startswith('reduce'):
-                    production_index = int(action.split()[1])
-                    production = self.grammar.productions[production_index]
-                    head, body = production[0], production[1]
-                    for _ in body:
-                        stack.pop()
-                        symbol_stack.pop()
-                    goto_state = self.slr_table[stack[-1]].get(head)
-                    if goto_state is not None:
-                        stack.append(goto_state)
-                        symbol_stack.append(head)
-                        self.actions_log.append(f"Reduce: {production} -> State {stack[-1]}")
-                    else:
-                        error_msg = f"Error: no goto state for '{head}' from state {stack[-1]}"
-                        self.actions_log.append(error_msg)
-                        raise Exception(error_msg)
-                elif action == 'Accept':
-                    self.actions_log.append("Parsing completed successfully.")
-                    return True
-                else:
-                    error_msg = f"Invalid action: {action}"
-                    self.actions_log.append(error_msg)
-                    raise Exception(error_msg)
-        except Exception as e:
-            self.actions_log.append(str(e))
-            return False
 
-    def eat(self, token_type):
-        if self.current_token and self.current_token.type == token_type:
-            token = self.current_token
-            self.advance()
-            return token
-        else:
-            expected = token_type
-            found = self.current_token.type if self.current_token else 'EOF'
-            raise Exception(f"Expected token {expected}, but found {found}")
+        while True:
+            state = stack[-1]
+            action = self.slr_table.get(state, {}).get(self.current_token.type)
+            if action is None:
+                self.actions_log.append(f"Syntax error: unexpected token {self.current_token.type}")
+                return False
+            if action.startswith('shift'):
+                next_state = int(action.split()[1])
+                stack.append(next_state)
+                symbol_stack.append(self.current_token)
+                self.actions_log.append(f"Shift to state {next_state} with token {self.current_token}")
+                self.advance()
+            elif action.startswith('reduce'):
+                production_number = int(action.split()[1])
+                head, body = self.grammar.productions[production_number]
+                for _ in body:
+                    stack.pop()
+                    symbol_stack.pop()
+                next_state = self.slr_table[stack[-1]].get(head)
+                stack.append(next_state)
+                symbol_stack.append(Token(head, None))
+                self.actions_log.append(f"Reduce using production {head} -> {body}")
+            elif action == 'Accept':
+                self.actions_log.append("Parsing completed successfully.")
+                return True
+            else:
+                self.actions_log.append(f"Invalid action: {action}")
+                return False
 
     def parse_expression(self):
         node = self.parse_term()
