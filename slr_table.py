@@ -16,96 +16,65 @@ class SLRTable:
         for state in self.automaton.states:
             state_key = frozenset(state)
             slr_table[state_key] = {}
+            # print(f"Estado: {state_key}")  # Depuración: Imprimir estado
             for item in state:
-                if hasattr(item, 'is_final') and item.is_final():
-                    if item.production.head == self.grammar.augmented_start:
+                if item[2] == len(item[1]):  # Si el punto está al final de la producción
+                    if item[0] == self.grammar.augmented_start:
                         slr_table[state_key]['$'] = 'Accept'
                     else:
-                        for terminal in follow_sets[item.production.head]:
-                            slr_table[state_key][terminal] = f'reduce {item.production}'
+                        for terminal in follow_sets[item[0]]:
+                            slr_table[state_key][terminal] = f'reduce {item}'
                 else:
-                    next_symbol = item.next_symbol() if hasattr(item, 'next_symbol') else None
-                    if next_symbol in self.grammar.terminals:  # Cambiamos tokens a terminals
-                        next_state = self.automaton.goto(state, next_symbol)
+                    next_symbol = item[1][item[2]]
+                    next_state = self.automaton.goto(state, next_symbol)
+                    if next_state:
                         next_state_key = frozenset(next_state)
-                        slr_table[state_key][next_symbol] = f'shift {next_state_key}'
-                    elif next_symbol in self.grammar.non_terminals:
-                        next_state = self.automaton.goto(state, next_symbol)
-                        next_state_key = frozenset(next_state)
-                        slr_table[state_key][next_symbol] = next_state_key
+                        # print(f"  Transición con símbolo {next_symbol} a {next_state_key}")  # Depuración: Imprimir transición
+                        if next_symbol in self.grammar.terminals:
+                            slr_table[state_key][next_symbol] = f'shift {next_state_key}'
+                        elif next_symbol in self.grammar.non_terminals:
+                            slr_table[state_key][next_symbol] = next_state_key
         return slr_table
 
-    def display_slr_table_as_text(self):
-        result = ""
-        action_columns = list(self.grammar.terminals) + ['$']  # Cambiamos tokens a terminals
+    def display_slr_table_as_dataframe(self):
+        rows = []
+        action_columns = list(self.grammar.terminals) + ['$']
         goto_columns = list(self.grammar.non_terminals)
         states = list(self.slr_table.keys())
 
         for state in states:
-            result += f"State: {state}\n"
+            state_repr = str(state)
             actions = self.slr_table[state]
-            for symbol in action_columns + goto_columns:
+            for symbol in action_columns:
                 if symbol in actions:
-                    result += f"  {symbol}: {actions[symbol]}\n"
-            result += "\n"
+                    rows.append((state_repr, 'Acción', actions[symbol]))
+            for non_terminal in goto_columns:
+                if non_terminal in actions:
+                    rows.append((state_repr, 'Goto', actions[non_terminal]))
 
-        return result
+        df = pd.DataFrame(rows, columns=['Estado', 'Tipo', 'Transición'])
+        return df
 
     def save_slr_table_as_pdf(self, filepath='slr_table.pdf'):
-        table_text = self.display_slr_table_as_text()
+        df = self.display_slr_table_as_dataframe()
+        table_data = [df.columns.values.tolist()] + df.values.tolist()
+
         c = canvas.Canvas(filepath, pagesize=letter)
         width, height = letter
 
         # Margins
         margin = 40
         textobject = c.beginText(margin, height - margin)
-        textobject.setFont("Helvetica", 12)
+        textobject.setFont("Helvetica", 8)
 
-        for line in table_text.split('\n'):
+        for row in table_data:
+            line = ' | '.join(map(str, row))
             if textobject.getY() < margin:
                 c.drawText(textobject)
                 c.showPage()
                 textobject = c.beginText(margin, height - margin)
-                textobject.setFont("Helvetica", 12)
+                textobject.setFont("Helvetica", 8)
             textobject.textLine(line)
 
         c.drawText(textobject)
         c.save()
-
-    def save_slr_table_as_csv(self, filepath='slr_table.csv'):
-        rows = []
-        action_columns = list(self.grammar.terminals) + ['$']  # Cambiamos tokens a terminals
-        goto_columns = list(self.grammar.non_terminals)
-        states = list(self.slr_table.keys())
-
-        for state in states:
-            state_repr = str(state)
-            actions = self.slr_table[state]
-            for symbol in action_columns:
-                if symbol in actions:
-                    rows.append((state_repr, symbol, actions[symbol]))
-            for non_terminal in goto_columns:
-                if non_terminal in actions:
-                    rows.append((state_repr, non_terminal, actions[non_terminal]))
-
-        df = pd.DataFrame(rows, columns=['State', 'Symbol', 'Action'])
-        df.to_csv(filepath, index=False)
-
-    def display_slr_table_as_dataframe(self):
-        rows = []
-        action_columns = list(self.grammar.terminals) + ['$']  # Cambiamos tokens a terminals
-        goto_columns = list(self.grammar.non_terminals)
-        states = list(self.slr_table.keys())
-
-        for state in states:
-            state_repr = str(state)
-            actions = self.slr_table[state]
-            for symbol in action_columns:
-                if symbol in actions:
-                    rows.append((state_repr, symbol, actions[symbol]))
-            for non_terminal in goto_columns:
-                if non_terminal in actions:
-                    rows.append((state_repr, non_terminal, actions[non_terminal]))
-
-        df = pd.DataFrame(rows, columns=['State', 'Symbol', 'Action'])
-        return df
