@@ -3,6 +3,8 @@ import uuid
 import tkinter as tk
 from tkinter import filedialog, Text, messagebox
 
+from generador_lexico import LexicalAnalyzer
+from generador_sintactico import Parser
 from automaton import LR0Automaton
 from visualizacion import visualize_automaton
 from parser_yapar import YaparParser
@@ -13,7 +15,7 @@ class MainApplication:
         self.root = root
         root.title("Laboratorio F")
         root.geometry("1200x700")
-        root.configure(bg='#003366') 
+        root.configure(bg='#003366')
 
         self.output_area = Text(root, height=30, width=100, bg="#e6f2ff")
         self.output_area.pack(pady=20)
@@ -39,11 +41,16 @@ class MainApplication:
         slr_table_button = tk.Button(button_frame, text="Guardar Tabla SLR como PDF", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.save_slr_table_as_pdf)
         slr_table_button.grid(row=1, column=2, padx=20, pady=10)
 
+        analyze_file_button = tk.Button(button_frame, text="Analizar Archivo", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.analyze_file)
+        analyze_file_button.grid(row=1, column=3, padx=20, pady=10)
+
         self.grammar = None
         self.automaton = None
         self.slr_table = None
         self.yalex_path = None
         self.yapar_path = None
+        self.lexical_analyzer = None
+        self.parser = None
 
     def open_yalex_file(self):
         filename = filedialog.askopenfilename(initialdir="/", title="Seleccionar Archivo YALex", filetypes=(("YALex files", "*.yalex"), ("all files", "*.*")))
@@ -55,7 +62,7 @@ class MainApplication:
         filename = filedialog.askopenfilename(initialdir="/", title="Seleccionar Archivo YAPar", filetypes=(("YAPar files", "*.yalp"), ("all files", "*.*")))
         if filename:
             self.yapar_path = filename
-            self.clear_output_area()  
+            self.clear_output_area()
             self.output_area.insert(tk.END, f"Archivo YAPar cargado: {filename}\n")
             self.process_yapar_file()
 
@@ -63,6 +70,8 @@ class MainApplication:
         if self.yapar_path:
             yapar_parser = YaparParser(self.yapar_path)
             self.grammar = yapar_parser.get_grammar()
+            self.slr_table = SLRTable(self.grammar).slr_table  # Generar la tabla SLR
+            self.parser = Parser(self.grammar, self.slr_table)  # Inicializar el parser con la gramática y la tabla SLR
             self.output_area.insert(tk.END, "Gramática cargada correctamente.\n")
         else:
             messagebox.showerror("Error", "Debe cargar un archivo YAPar antes de continuar.")
@@ -121,10 +130,55 @@ class MainApplication:
             self.slr_table = SLRTable(self.grammar)
             pdf_filename = 'slr_table.pdf'
             self.slr_table.save_slr_table_as_pdf(pdf_filename)
+            df = self.slr_table.display_slr_table_as_dataframe()
+            print("\nTabla SLR:")
+            print(df.to_string(index=False))
             self.output_area.insert(tk.END, f"Tabla SLR generada y guardada correctamente en archivo: {pdf_filename}\n")
             os.system(f"start {pdf_filename}")  
         else:
             messagebox.showerror("Error", "Gramática no cargada. Por favor, cargue un archivo YAPar y valide la sintaxis primero.")
+
+    def analyze_file(self):
+        filename = filedialog.askopenfilename(initialdir="/", title="Seleccionar Archivo de Texto", filetypes=(("Text files", "*.txt"), ("all files", "*.*")))
+        if filename:
+            self.clear_output_area()
+            self.output_area.insert(tk.END, f"Archivo de texto cargado: {filename}\n")
+            content = self.read_file(filename)
+            self.output_area.insert(tk.END, f"Contenido del archivo:\n{content}\n")
+            
+            # Realizar análisis léxico
+            self.lexical_analyzer = LexicalAnalyzer()
+            self.lexical_analyzer.set_input(content)
+            tokens = []
+            try:
+                while True:
+                    token = self.lexical_analyzer.get_next_token()
+                    if token is None:
+                        break
+                    tokens.append(token)
+            except ValueError as e:
+                self.output_area.insert(tk.END, f"\nError léxico: {str(e)}\n")
+
+            self.output_area.insert(tk.END, f"\nTokens encontrados:\n")
+            for token in tokens:
+                self.output_area.insert(tk.END, f"{token}\n")
+
+            # Realizar análisis sintáctico
+            error_message = ""
+            try:
+                self.parser.set_tokens(tokens)
+                if self.parser.parse():
+                    error_message = "Análisis sintáctico completado sin errores."
+                else:
+                    error_message = "Se encontraron errores en el análisis sintáctico."
+            except Exception as e:
+                error_message = f"Error de análisis sintáctico: {str(e)}"
+
+            self.output_area.insert(tk.END, "\nRegistro de acciones:\n")
+            for action in self.parser.actions_log:
+                self.output_area.insert(tk.END, f"{action}\n")
+
+            self.output_area.insert(tk.END, f"\n{error_message}\n")
 
     @staticmethod
     def read_file(file_path):
