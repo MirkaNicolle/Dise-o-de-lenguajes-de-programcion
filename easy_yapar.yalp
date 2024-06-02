@@ -2,7 +2,7 @@
 /* Definición de parser */
 
 /* INICIA sección de TOKENS */
-%token Number
+%token NUMBER
 %token PLUS
 %token MULT
 IGNORE WS
@@ -22,7 +22,7 @@ rule term =
 ;
 
 rule factor =
-    Number                 { return create_leaf('number', Number) }
+    NUMBER                 { return create_leaf('number', Number) }
 ;
 /* FINALIZA sección de PRODUCCIONES */
 
