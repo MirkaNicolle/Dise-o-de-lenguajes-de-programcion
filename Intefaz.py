@@ -9,6 +9,7 @@ from automaton import LR0Automaton
 from visualizacion import visualize_automaton
 from parser_yapar import YaparParser
 from slr_table import SLRTable
+from validacion import validar
 
 class MainApplication:
     def __init__(self, root):
@@ -29,8 +30,11 @@ class MainApplication:
         open_yapar_button = tk.Button(button_frame, text="Cargar YAPar", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.open_yapar_file)
         open_yapar_button.grid(row=0, column=1, padx=20, pady=10)
 
+        validate_yapar_button = tk.Button(button_frame, text="Validar gramática SLR", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.validate_yapar_file)
+        validate_yapar_button.grid(row=0, column=2, padx=20, pady=10)
+
         run_automaton_button = tk.Button(button_frame, text="Generar Autómata LR(0)", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.generate_automaton)
-        run_automaton_button.grid(row=0, column=2, padx=20, pady=10)
+        run_automaton_button.grid(row=0, column=3, padx=20, pady=10)
 
         first_set_button = tk.Button(button_frame, text="Calcular Primero", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.calculate_first_sets)
         first_set_button.grid(row=1, column=0, padx=20, pady=10)
@@ -38,7 +42,7 @@ class MainApplication:
         follow_set_button = tk.Button(button_frame, text="Calcular Siguiente", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.calculate_follow_sets)
         follow_set_button.grid(row=1, column=1, padx=20, pady=10)
 
-        slr_table_button = tk.Button(button_frame, text="Guardar Tabla SLR como PDF", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.save_slr_table_as_pdf)
+        slr_table_button = tk.Button(button_frame, text="Generar SLR", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.save_slr_table_as_pdf)
         slr_table_button.grid(row=1, column=2, padx=20, pady=10)
 
         analyze_file_button = tk.Button(button_frame, text="Analizar Archivo", font=('Helvetica', 12), padx=20, pady=10, fg="white", bg="#3366cc", command=self.analyze_file)
@@ -65,6 +69,13 @@ class MainApplication:
             self.clear_output_area()
             self.output_area.insert(tk.END, f"Archivo YAPar cargado: {filename}\n")
             self.process_yapar_file()
+
+    def validate_yapar_file(self):
+        if self.yapar_path:
+            validation_message = validar(self.yapar_path)
+            self.output_area.insert(tk.END, f"\nValidación YAPar:\n{validation_message}\n")
+        else:
+            messagebox.showerror("Error", "Debe cargar un archivo YAPar antes de validar.")
 
     def process_yapar_file(self):
         if self.yapar_path:
