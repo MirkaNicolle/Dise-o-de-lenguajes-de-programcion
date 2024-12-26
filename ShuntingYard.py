@@ -40,7 +40,11 @@ def to_postfix(infix_expr):
 
 '''Creacion del archivo con expresion postfix'''
 
-with open('infix.txt', 'r') as file: #archivo de entrada
+'''with open('infix.txt', 'r') as file: #archivo de entrada
+    infix_exprs = file.readlines()'''
+'''with open('infix2.txt', 'r') as file: #archivo de entrada
+    infix_exprs = file.readlines()'''
+with open('infix3.txt', 'r') as file: #archivo de entrada
     infix_exprs = file.readlines()
 
 postfix_infix_exprs = []
