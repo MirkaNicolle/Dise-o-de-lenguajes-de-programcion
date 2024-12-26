@@ -9,10 +9,9 @@ def handle_whitespace(lexbuf):
     return None  # Simply ignore whitespaces
 
 def handle_string(lexbuf):
-    return lexbuf.strip('"')  # Remove quotes and return the string
-
+    return lexbuf.strip('"')  #remueve comillas y returna the string
 def handle_multiline_comment(lexbuf):
-    return None  # Ignore multiline comments
+    return None  #ignora multiline comments
 
 def handle_eof():
     raise Exception("End of Input")
@@ -23,18 +22,18 @@ let digit = [0-9]
 let alpha = [a-zA-Z_]
 let whitespace = [\s\t]
 let operator = [+=\-*/><();,.{}]
-let string = "\"(\\\\.|[^\"\\\\])*\""  # Matches double quoted strings handling escaped quotes
-let multiline_comment = "/\*((.|\n)*?)\*/"  # Matches multiline comments
+let string = "\"(\\\\.|[^\"\\\\])*\""  #Match con cadenas entre comillas dobles y barras invertidas
+let multiline_comment = "/\*((.|\n)*?)\*/"  #Match multiline comments
 
 rule get_token =
-    {digit}+             { handle_number(lexbuf) }            (* Easy: - Matches integers *)
-  | {whitespace}+        { handle_whitespace(lexbuf) }        (* Easy: - Ignores whitespace *)
-  | {alpha}+             { handle_identifier(lexbuf) }        (* Medium: - Matches identifiers *)
-  | [+-*/()]             { return lexbuf }                    (* Medium: - Matches operators and parentheses *)
-  | {digit}+\.{digit}+   { return float(lexbuf) }             (* Difficult: - Matches floating-point numbers *)
-  | {string}             { handle_string(lexbuf) }            (* Difficult: - Matches double quoted strings *)
-  | {multiline_comment}  { handle_multiline_comment(lexbuf) } (* Difficult: - Ignores multiline comments *)
-  | eof                  { handle_eof() }                     (* Handle end of file or input *)
+    {digit}+             { handle_number(lexbuf) }            (*Easy: - Matches integers *)
+  | {whitespace}+        { handle_whitespace(lexbuf) }        (*Easy: - ignora espacios en blanco *)
+  | {alpha}+             { handle_identifier(lexbuf) }        (*Medium: - Match identificadores *)
+  | [+-*/()]             { return lexbuf }                    (*Medium: - Match operadores y parentesis *)
+  | {digit}+\.{digit}+   { return float(lexbuf) }             (*Difficult: - Match numeros con punto *)
+  | {string}             { handle_string(lexbuf) }            (*Difficult: - Match con cadenas entre comillas dobles *)
+  | {multiline_comment}  { handle_multiline_comment(lexbuf) } (*Difficult: - Ignora multiline comments *)
+  | eof                  { handle_eof() }                     (*end of file *)
 
 { 
 
