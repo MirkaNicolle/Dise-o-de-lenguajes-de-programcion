@@ -1,3 +1,5 @@
+'''Laboratorio C'''
+
 import tkinter as tk 
 from tkinter import filedialog, messagebox, ttk, Text  
 from ShuntingYard import to_postfix 
