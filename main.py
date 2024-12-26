@@ -13,7 +13,8 @@ def main():
         'arbol.py',           
         'Thompson.py',        
         'Subconjuntos.py',    
-        'Minimizacion.py',    
+        'Minimizacion.py', 
+        'arbol.py',   
         'Directo.py',         
         'cadena.py'           
     ]
@@ -23,3 +24,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+#d cd
+#a null
+#aaaa caaaa
