@@ -49,6 +49,10 @@ def process_yalex_file(input_path, output_path):
     with open(output_path, 'w') as file: 
         file.write('\n'.join(postfix_expressions)) 
 
+<<<<<<< Updated upstream
 process_yalex_file('easy.yalex', 'output_postfix.yalex')
+=======
+#process_yalex_file('easy.yalex', 'output_postfix.yalex')
+>>>>>>> Stashed changes
 #process_yalex_file('medium.yalex', 'output_postfix.yalex')
 #process_yalex_file('hard.yalex', 'output_postfix.yalex')
