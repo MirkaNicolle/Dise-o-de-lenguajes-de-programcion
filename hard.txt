@@ -1,8 +1,5 @@
-floatValue = 123.456
-@
-if (x >= 99.9) {
-    // Comienza un bloque
-    y = sin(x) * 10.5;
-    z = "String with spaces and numbers 12345";
-}
-_identificador_con_subrayado = otroIdentificador + unTercero - 987.654
+"String with spaces and numbers 12345"
+/* This is a multiline
+   comment that should be ignored
+   even with numbers 123 and strings "inside" */
+_Identifier_with_Underscore = "Another \"escaped\" string";
