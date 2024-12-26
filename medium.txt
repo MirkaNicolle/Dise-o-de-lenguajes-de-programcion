@@ -1,2 +1,2 @@
-variable1 = 123 * (inputValue / 12) @
-alpha123 = beta456 + gamma789
+floatValue = 123.456;
+IF (x >= 99.9) { x = 10.5; }
