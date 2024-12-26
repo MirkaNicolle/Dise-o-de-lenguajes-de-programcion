@@ -1,0 +1,27 @@
+digraph digraph_afd_FLOAT {
+	S1
+	S2 [shape=doublecircle]
+	S2 -> S2 [label="0-9"]
+	S1 -> S2 [label="0-9"]
+}
+
+digraph digraph_afd_COMENTARIO_MULTILINEA {
+	S1 [shape=doublecircle]
+	S2 [shape=doublecircle]
+	S2 -> S2 [label=n]
+	S1 -> S2 [label=n]
+}
+
+digraph digraph_afd_STRING {
+	S1 [shape=doublecircle]
+	S2 [shape=doublecircle]
+	S2 -> S2 [label="^\"\\"]
+	S1 -> S2 [label="^\"\\"]
+}
+
+digraph digraph_afd_FUNCION_MATHEMATICA {
+	S1 [shape=doublecircle]
+	S2 [shape=doublecircle]
+	S2 -> S2 [label="^)"]
+	S1 -> S2 [label="^)"]
+}
