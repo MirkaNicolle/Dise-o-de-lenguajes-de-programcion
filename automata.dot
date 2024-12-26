@@ -1,0 +1,20 @@
+digraph G {
+    rankdir=LR;
+    node [shape = circle];
+    
+    I0 [label="I0\nS' → •S\nS → •A\nA → •A + B\nA → •B\nB → •id"];
+    I1 [label="I1\nS' → S•", shape=doublecircle];
+    I2 [label="I2\nS → A•\nA → A• + B"];
+    I3 [label="I3\nA → B•"];
+    I4 [label="I4\nB → id•"];
+    I5 [label="I5\nA → A +• B\nB → •id"];
+    I6 [label="I6\nA → A + B•"];
+
+    I0 -> I1 [label="S"];
+    I0 -> I2 [label="A"];
+    I0 -> I3 [label="B"];
+    I0 -> I4 [label="id"];
+    I2 -> I5 [label="+"];
+    I5 -> I6 [label="B"];
+    I5 -> I4 [label="id"];
+}
