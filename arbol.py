@@ -120,8 +120,8 @@ def main():
     with open('arbol.txt', 'w') as file:
         file.write('\n'.join(tree_representation))
 
-    #print("\nÁrbol de la expresión regular:")
-    #print('\n'.join(tree_representation))
+    print("\nÁrbol de la expresión regular:")
+    print('\n'.join(tree_representation))
 
 if __name__ == "__main__":
     main()
