@@ -1,0 +1,33 @@
+{
+/* Definición de parser */
+
+/* INICIA sección de TOKENS */
+%token Number
+%token PLUS
+%token MULT
+IGNORE WS
+/* FINALIZA sección de TOKENS */
+
+%%
+
+/* INICIA sección de PRODUCCIONES */
+rule expression =
+    expression PLUS term   { return create_node('add', expression, term) }
+  | term                   { return term }
+;
+
+rule term =
+    term MULT factor       { return create_node('multiply', term, factor) }
+  | factor                 { return factor }
+;
+
+rule factor =
+    Number                 { return create_leaf('number', Number) }
+;
+/* FINALIZA sección de PRODUCCIONES */
+
+}
+
+{
+print("Parser generation completed.")
+}
